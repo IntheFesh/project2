@@ -1,0 +1,6 @@
+# LIBERO-PRO stress test (CITATION ONLY). arXiv 2510.03827.
+# Collapses to ~0% by design (exposes memorization). NOT the main suite:
+# a 0% floor cannot produce a meaningful recovery curve. Use only as a final
+# stress test or to cite the memorization argument.
+suite: libero_pro
+enabled: false

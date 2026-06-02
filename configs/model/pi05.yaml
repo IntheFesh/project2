@@ -1,0 +1,8 @@
+# pi0.5 modern comparator (STRETCH; ideally only with a 2nd 5090).
+# Flow-matching, ~3B; LoRA feasible on 32GB. LeRobot-native base.
+# Preferred over OpenVLA-OFT (same LeRobot stack; current flow-matching direction).
+name: pi05
+policy_type: pi05
+lerobot_base: pi05_libero
+device: cuda
+dtype: bfloat16

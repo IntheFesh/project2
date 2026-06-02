@@ -1,0 +1,13 @@
+# LoRA fine-tuning config for SmolVLA (Phase 3). Adapter saved; base frozen.
+rank: 16
+alpha: 32
+dropout: 0.05
+# TODO(Phase 3): confirm exact module names against the SmolVLA architecture.
+target_modules: [q_proj, k_proj, v_proj, o_proj]
+learning_rate: 1.0e-4
+batch_size: 8            # TODO: tune to fit 32GB; smoke-test first
+grad_accum_steps: 1
+max_steps: null          # set AFTER smoke-test wall-clock (must fit < 5-day budget)
+warmup_steps: 100
+save_adapter_only: true  # disk discipline: never save full base weights
+seed: 0

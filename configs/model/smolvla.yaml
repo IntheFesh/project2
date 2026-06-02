@@ -1,0 +1,7 @@
+# SmolVLA base model (CORE). ~450M params; fits 32GB trivially
+# (LoRA ~6-12GB, inference ~3GB). Pretrained LIBERO checkpoint.
+name: smolvla
+policy_type: smolvla
+hf_checkpoint: HuggingFaceVLA/smolvla_libero   # base for conditions A/B/C
+device: cuda
+dtype: bfloat16
