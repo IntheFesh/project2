@@ -1,0 +1,18 @@
+# Evaluation matrix (lean single-card starting point; tune via smoke-test).
+benchmark: libero
+# ~8-10 task subset across Spatial/Object/Goal/Long; filled by data/prepare_libero_subset.py
+task_suite: libero_spatial
+task_subset: []
+n_episodes: 20               # per task; bump only where the 95% CI is wide
+max_steps_per_episode: 600   # TODO(Phase 1): confirm per LIBERO task horizon
+
+# Seeds: 3 on the B/C(/D) comparison; collapse curve (A) needs only 1 (effect is huge).
+seeds_comparison: [0, 1, 2]
+seeds_collapse: [0]
+
+# Paired comparison (Phase 5) requires identical init states across conditions.
+fixed_init_states: true
+
+# Single GPU now; --workers reserved for a possible 2nd card.
+workers: 1
+device: cuda

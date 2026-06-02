@@ -1,0 +1,12 @@
+# LIBERO-Plus perturbation suite (PRIMARY). arXiv 2510.13626.
+# Drop-in replacement for `libero` (pip install -e .). The thin wrapper
+# (perturb/libero_plus_wrapper.py) only SELECTS family + L1-L5 level;
+# perturbations are NOT reimplemented (keeps numbers comparable to the benchmark).
+suite: libero_plus
+families_core: [viewpoint, lighting, texture, noise]
+families_stretch: [layout, robot_init]
+levels: [1, 2, 3, 4, 5]      # L1-L5 graded magnitude
+# Phase 2 starts with 2 levels per family to save serial-GPU time; expand only if needed.
+start_levels: [2, 4]
+# Disk discipline: LIBERO-Plus HF assets ~6.4GB full -> subset before download.
+subset_only: true

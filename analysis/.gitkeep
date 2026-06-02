@@ -1,0 +1,2 @@
+# Analysis outputs: small eval summaries (CSV/JSON) + plots only (disk discipline).
+# Per-episode dumps under runs/**/episodes/ are git-ignored.

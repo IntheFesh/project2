@@ -1,0 +1,12 @@
+# cu128 PyTorch stack for the RTX 5090 (Blackwell, sm_120). RENTAL ONLY.
+#
+# Install (into the uv venv) on the rented GPU box:
+#   uv pip install -r requirements-gpu.txt
+# or with plain pip:
+#   pip install -r requirements-gpu.txt
+#
+# CUDA 12.8 (cu128) is the minimum for sm_120; torch>=2.7 is the first stable with native
+# sm_120 / cu128 wheels. Do NOT use CUDA 13.x. The index-url below pins these to cu128.
+--index-url https://download.pytorch.org/whl/cu128
+torch>=2.7.0
+torchvision>=0.22.0
