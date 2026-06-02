@@ -61,11 +61,42 @@ def parse_perturb_spec(text: str | None) -> PerturbSpec | None:
     return PerturbSpec(family=family.strip(), level=level_int)
 
 
+def level_to_fraction(level: int) -> float:
+    """Map a LIBERO-Plus level (L1-L5) to a normalized magnitude in ``(0, 1]``.
+
+    This is *our* convention (``level / MAX_LEVEL``) for aligning training-augmentation
+    magnitude to an eval level; it does not alter the LIBERO-Plus perturbation itself.
+    """
+    if not (MIN_LEVEL <= level <= MAX_LEVEL):
+        raise ValueError(f"level must be in [{MIN_LEVEL}, {MAX_LEVEL}], got {level!r}")
+    return level / MAX_LEVEL
+
+
+def classify_distribution(spec: PerturbSpec | None, trained_families) -> str:
+    """Tag an eval ``spec`` as ``"clean"``, ``"in_dist"`` or ``"held_out"``.
+
+    Honesty guard (project rule #3): a perturbation family seen during augmentation is
+    *in-distribution*; one never seen is *held-out generalization*. This classifier is the
+    single source of truth used to label every reported perturbation result, so in-dist
+    recovery is never accidentally presented as generalization.
+
+    Args:
+        spec: the eval perturbation (``None`` means clean).
+        trained_families: the families used during training augmentation (condition B/C).
+    """
+    if spec is None:
+        return "clean"
+    return "in_dist" if spec.family in set(trained_families) else "held_out"
+
+
 def make_perturbed_env(task: str, spec: PerturbSpec | None, **kwargs):
     """Return a LIBERO-Plus environment for ``task`` under ``spec`` (``None`` -> clean env).
 
-    GPU/simulator runtime; wired against the installed LIBERO-Plus drop-in in Phase 2.
+    GPU/simulator runtime. Wired against the installed LIBERO-Plus drop-in in Phase 2; the
+    family -> LIBERO-Plus perturbation-dimension key mapping is confirmed at that point
+    against the installed package (we do not reimplement the perturbations here).
     """
     raise NotImplementedError(
-        "Phase 2: construct the LIBERO-Plus env for the selected family/level."
+        "Phase 2: construct the LIBERO-Plus env for the selected family/level "
+        "(install LIBERO-Plus as the `libero` drop-in first)."
     )
