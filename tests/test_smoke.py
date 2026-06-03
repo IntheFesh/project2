@@ -12,12 +12,16 @@ MODULES = [
     "eval.bootstrap",
     "eval.paired",
     "eval.holm",
+    "eval.budget",
     "eval.run_rollout",
     "eval.record_demo",
     "perturb.libero_plus_wrapper",
     "data.augment.visual_aug",
+    "data.prepare_libero_subset",
     "train.train_lora",
     "train.feature_mod",
+    "scripts.estimate_budget",
+    "scripts.smoke_timing",
 ]
 
 
