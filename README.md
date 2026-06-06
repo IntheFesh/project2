@@ -256,6 +256,14 @@ routes all model/dataset caches to the big data disk `/root/autodl-tmp`, turns o
 **academic network acceleration** + the `hf-mirror.com` endpoint, then installs LeRobot +
 LIBERO-Plus, verifies `sm_120`, runs the tests, and gates the budget.
 
+The LIBERO-Plus step does the full install its README requires (not just `pip install -e`):
+apt system libs (`libexpat1`, `libfontconfig1-dev`, `libpython3-stdlib`, `libmagickwand-dev` —
+ImageMagick/Wand backs the texture/background perturbations; installed only if root/sudo, else the
+exact command is printed), `pip install -r extra_requirements.txt`, and the **`assets.zip`**
+download from the HF dataset `Sylvest/LIBERO-plus` unzipped to `<checkout>/libero/libero/assets/`
+(idempotent, mirror-aware). **Run deploy + the asset download in 无卡模式 (no-GPU mode)** to keep
+these multi-GB downloads off the GPU clock, then switch to GPU mode for rollouts.
+
 ```bash
 # clone onto the big data disk; use tmux so an SSH drop won't kill a long run
 cd /root/autodl-tmp && git clone -b claude/confident-lovelace-4ddWN <your-repo-url> vcr && cd vcr
@@ -268,7 +276,8 @@ python3 deploy.py             # full deploy with AutoDL-friendly defaults
 Tips: choose an AutoDL image with **CUDA 12.8 / PyTorch ≥ 2.7** (otherwise `deploy.py` warns and you
 can add `--install-torch`); do downloads/setup in **无卡模式 (no-GPU mode)** to save GPU-hours, then
 switch to GPU mode for rollouts. Useful flags: `--stage core` (off-GPU only), `--budget-only`,
-`--no-accel`, `--no-hf-mirror`, `--skip-libero-plus`, `--data-dir PATH`.
+`--no-accel`, `--no-hf-mirror`, `--skip-lerobot`, `--skip-libero-plus`, `--skip-apt`,
+`--skip-assets`, `--data-dir PATH`.
 
 ## 7. Phase-by-phase execution guide
 
