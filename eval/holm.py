@@ -1,6 +1,6 @@
 """Holm-Bonferroni multiple-comparison correction.
 
-Phase 5 (the differentiator). We test the method gap across several perturbation families,
+Phase 5 (supporting statistics infra). We test the method gap across several perturbation families,
 so family-level p-values are corrected for multiplicity. Off-GPU; pure Python.
 """
 

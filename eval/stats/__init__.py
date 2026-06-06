@@ -1,9 +1,10 @@
-"""Paired-statistics evaluation harness for VLA robustness -- the project's headline contribution.
+"""Paired-statistics evaluation harness for VLA robustness -- SUPPORTING INFRASTRUCTURE.
 
-A small, reusable protocol for comparing VLA training interventions under matched perturbations,
-packaged as one public surface. It is the VLA-manipulation analogue of rliable (Agarwal et al.,
-NeurIPS 2021, arXiv:2108.13264): report **effect sizes with uncertainty**, not bare point success
-rates. See ``docs/EVALUATION.md`` for the full protocol.
+This is **not** the project's headline contribution (that is the diagnostic-probe battery, see
+``docs/PROBES.md``). It is the supporting statistical machinery -- shared with the author's prior
+**PolicyArena** project -- used to *read* the probe results: report effect sizes with uncertainty,
+not bare point success rates. Statistical conventions follow Agarwal et al., NeurIPS 2021
+(arXiv:2108.13264). See ``docs/EVALUATION.md`` for the full protocol.
 
 The protocol
 ------------

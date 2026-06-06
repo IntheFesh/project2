@@ -3,11 +3,12 @@
 Project memory for Claude Code. Read this every session.
 
 ## What this is
-A **reproducible empirical study** of visual-perturbation robustness in open VLA models, with **two
-contributions**: (1) honest measurement of **collapse → recovery** (perturbation-targeted LoRA),
-compared with **paired statistics** + a first-class **held-out generalization** test + a
-**language-conditioning probe**; (2) a **reusable paired-statistics evaluation harness/protocol**
-(`eval/stats/`, `docs/EVALUATION.md`) — the VLA analogue of rliable. Portfolio /
+A **reproducible mechanistic probe of VLA visual-representation quality** under perturbation:
+reproduce the **collapse**, run a **diagnostic-probe battery** (held-out cross-family generalization
++ language-conditioning sensitivity; optional visual-feature-shift), and measure whether
+perturbation-targeted LoRA **fixes the underlying representation or only patches symptoms** on the
+trained families — delta-only, with paired statistics. Headline doc: `docs/PROBES.md`. The
+paired-stats harness (`eval/stats/`) is **supporting infrastructure**, not the headline. Portfolio /
 research-engineering project (PhD-application signal), **not a paper**. Question-first, not tool-first.
 
 ## Hard budget (non-negotiable)
@@ -20,7 +21,10 @@ research-engineering project (PhD-application signal), **not a paper**. Question
 2. **Only delta/relative claims in headlines** (Δ_robust, Recovery, Δ_method). Never claim to
    reproduce a paper's absolute SOTA; README states the base absolute SR may not match.
 3. **Always label in-dist vs held-out.** Never present in-dist recovery as generalization.
-4. **Headline = intervention comparison (A/B/C), not recovery size.** Lead with paired stats.
+4. **Headline = the diagnostic-probe battery** (representation quality: held-out generalization +
+   language sensitivity), read *via* the A/B/C comparison + paired stats — not the recovery size, and
+   **not the statistics harness**. Statistics is supporting infrastructure, shared with the author's
+   prior **PolicyArena** project — never present it as this repo's headline contribution.
 5. **No novelty claims.** Cite prior art, incl. arXiv 2510.00037 (the "RobustVLA" *method*).
 6. **Env:** CUDA 12.8 (cu128) + PyTorch ≥ 2.7 (first stable with `sm_120`). No CUDA 13.x.
    Prefer `pytorch/pytorch:2.x-cuda12.8-cudnn9`; avoid JIT of custom CUDA kernels (use AOT wheels).

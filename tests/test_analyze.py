@@ -78,3 +78,47 @@ def test_cli_writes_text_and_json(tmp_path) -> None:
 def test_json_safe_converts_nan() -> None:
     assert _json_safe(float("nan")) is None
     assert _json_safe({"a": float("nan"), "b": [1.0, float("nan")]}) == {"a": None, "b": [1.0, None]}
+
+
+# --------------------------- Probe 2: language conditioning ---------------------------
+
+PROBE_CSV = Path(__file__).parent / "fixtures" / "rollout_probe_sample.csv"
+
+
+def test_language_probe_inline_rows() -> None:
+    rows = [
+        {"condition": "A", "task_id": "t1", "family": "viewpoint", "level": 2, "seed": 0,
+         "success": 1, "instruction": "correct"},
+        {"condition": "A", "task_id": "t2", "family": "viewpoint", "level": 2, "seed": 0,
+         "success": 1, "instruction": "correct"},
+        {"condition": "A", "task_id": "t1", "family": "viewpoint", "level": 2, "seed": 0,
+         "success": 0, "instruction": "blank"},
+        {"condition": "A", "task_id": "t2", "family": "viewpoint", "level": 2, "seed": 0,
+         "success": 0, "instruction": "blank"},
+    ]
+    rep = build_report(rows, trained_families=["viewpoint"], n_resamples=200, seed=0)
+    blank = rep["language_probe"]["A"]["blank"]
+    assert blank["sr_correct"] == pytest.approx(1.0)
+    assert blank["sr_ablated"] == pytest.approx(0.0)
+    assert blank["delta"] == pytest.approx(1.0)  # SR_correct - SR_ablated
+    assert blank["n"] == 2
+    assert "Language-conditioning probe" in format_text(rep)
+
+
+def test_no_language_probe_without_instruction_column() -> None:
+    # The standard rollout fixture has no instruction column -> no language_probe key.
+    rep = build_report(read_rows(CSV), trained_families=["viewpoint"], n_resamples=200, seed=0)
+    assert "language_probe" not in rep
+
+
+def test_cli_surfaces_language_probe(tmp_path) -> None:
+    out = tmp_path / "probe_report"
+    rc = analyze_main(
+        ["--csv", str(PROBE_CSV), "--trained-families", "viewpoint", "--n-resamples", "200",
+         "--out", str(out)]
+    )
+    assert rc == 0
+    text = out.with_suffix(".txt").read_text()
+    assert "Language-conditioning probe" in text
+    data = json.loads(out.with_suffix(".json").read_text())
+    assert "language_probe" in data and "A" in data["language_probe"]

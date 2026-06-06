@@ -1,12 +1,21 @@
 # Evaluation protocol
 
-This project's headline contribution is not a model — it is a **reusable, honest evaluation
-protocol** for VLA visual-robustness, packaged in [`eval/stats/`](../eval/stats/) and driven by
-[`scripts/analyze_results.py`](../scripts/analyze_results.py). Its north star is **rliable**
-(Agarwal et al., *"Deep Reinforcement Learning at the Edge of the Statistical Precipice"*, NeurIPS
-2021, [arXiv:2108.13264](https://arxiv.org/abs/2108.13264)): with few seeds and noisy success
-indicators, report **effect sizes with uncertainty**, not bare point success rates. This repo is
-the VLA-manipulation analogue of that argument.
+> **The headline contribution is elsewhere.** This document describes the project's **statistical
+> conventions** only. The project's headline contribution is the **diagnostic-probe battery** in
+> [`PROBES.md`](PROBES.md) — the statistical harness here is **supporting infrastructure**, not the
+> contribution of this repo.
+>
+> *Statistical infrastructure (paired bootstrap, McNemar, Holm–Bonferroni) is shared with the
+> author's prior project, **PolicyArena** — a statistically-validated tool-calling + RAG agent for a
+> Chinese enterprise service desk. This repository's distinct contribution is the **visual
+> representation quality diagnostic** (held-out cross-family generalization + language-conditioning
+> probe), not the statistical methodology.*
+
+The harness ([`eval/stats/`](../eval/stats/), driven by
+[`scripts/analyze_results.py`](../scripts/analyze_results.py)) reports **effect sizes with
+uncertainty** rather than bare point success rates. Statistical conventions follow Agarwal et al.,
+*Deep Reinforcement Learning at the Edge of the Statistical Precipice*, NeurIPS 2021
+([arXiv:2108.13264](https://arxiv.org/abs/2108.13264)).
 
 ## The unit of evaluation
 

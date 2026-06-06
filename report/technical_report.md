@@ -11,23 +11,29 @@ shortcuts that break under a moved camera / changed lighting — and which train
 
 Two contributions:
 
-1. **An honest measurement** of visual-perturbation collapse and recovery from perturbation-targeted
-   LoRA, comparing interventions A/B/C with **paired statistics**, a first-class **held-out
-   generalization** test, and a **language-conditioning probe** of the mechanism.
-2. **A reusable paired-statistics evaluation harness/protocol** for VLA robustness (`eval/stats/`,
-   `docs/EVALUATION.md`) — the VLA-manipulation analogue of rliable.
+1. **A reproducible measurement** of visual-perturbation collapse and recovery from
+   perturbation-targeted LoRA — on a single GPU, under 5 days.
+2. **A diagnostic-probe battery** — held-out cross-family generalization + language-conditioning
+   sensitivity + (optional) visual-feature-shift — that distinguishes **representation-level fixing
+   from symptom patching**. Canonical description: `docs/PROBES.md`.
 
-**World-model framing.** Perturbation robustness is a proxy for whether the policy's implicit
-representation is *causal* (models the scene) or *shortcut-based* (latches onto spurious cues a
-perturbation destroys). Held-out generalization is weak evidence of a more world-model-like
-representation; we measure it rather than claim it.
+The A/B/C intervention comparison and paired statistics are the *instrument* the probes are read
+with — **supporting infrastructure** (shared with the author's prior **PolicyArena** project), not
+this repo's contribution.
 
-## 1. Headline — intervention comparison (lead result)
+**World-model framing.** Perturbation robustness, **language conditioning**, and **cross-family
+generalization** are *joint* proxies for whether the policy's implicit representation is *causal*
+(models the scene) or *shortcut-based* (latches onto spurious cues a perturbation destroys). A
+representation-level fix improves all three *together*; a symptom patch raises only in-dist success.
+We *test* these observable consequences rather than *claim* causality.
 
-The contribution is the **A/B/C(/D) comparison under matched perturbations**, with paired statistics
-— **not** the recovery magnitude (same-family recovery is expected). Perturbed SR is averaged over
-the in-distribution augmented families; **paired at fixed task IDs** (matched by `(task_id, level,
-seed)`); 3 LoRA-training seeds on B/C(/D).
+## 1. How the probes are read — the intervention comparison
+
+**Question (restated).** Does perturbation-targeted LoRA fix the representation, or patch symptoms?
+The **A/B/C(/D) comparison under matched perturbations**, with paired statistics, is **how we read
+the probe results** — *not* the contribution itself, and **not** the recovery magnitude (same-family
+recovery is expected). Perturbed SR is averaged over the in-distribution augmented families; **paired
+at fixed task IDs** (matched by `(task_id, level, seed)`); 3 LoRA-training seeds on B/C(/D).
 
 | Condition | Aug | Clean SR | Perturbed SR (in-dist) | Recovery | Δ_method vs B | 95% CI | Holm *p* |
 |---|---|:--:|:--:|:--:|:--:|:--:|:--:|
@@ -74,6 +80,13 @@ labeled as such in every table.
 
 Packaged as `eval/stats/` and driven by `scripts/analyze_results.py`; protocol in `docs/EVALUATION.md`.
 
+This statistical infrastructure is **supporting, not a contribution** — the project makes **no claim
+of a methodological contribution in evaluation statistics**. *Statistical infrastructure (paired
+bootstrap, McNemar, Holm–Bonferroni) is shared with the author's prior project, **PolicyArena** — a
+statistically-validated tool-calling + RAG agent for a Chinese enterprise service desk. This
+repository's distinct contribution is the **visual representation quality diagnostic** (held-out
+cross-family generalization + language-conditioning probe), not the statistical methodology.*
+
 ## 6. Failure cases — `TBD`
 
 Where C still fails; qualitative rollout notes; any family with no recovery.
@@ -93,10 +106,13 @@ Method / benchmark prior art: arXiv 2510.00037 (RobustVLA *method*, closest prio
 from this *study*), 2510.13626 (LIBERO-Plus), 2510.03827 (LIBERO-PRO), 2512.02902 (FTM/FLA),
 2510.17640 (RESample), 2506.01844 (SmolVLA base).
 
-Evaluation-methodology lineage: **rliable / Statistical Precipice (arXiv:2108.13264)** — the north
-star (effect sizes with uncertainty, not point scores); **SimplerEnv (arXiv:2405.05941)** and
-**AutoEval (arXiv:2503.24278)** — reproducible/scalable policy evaluation. This work is their
-perturbation-robustness analogue with paired statistics.
+**Positioning lineage (the contribution): representation quality** — shortcut learning
+(arXiv:2004.07780, Geirhos et al.), causal representation learning (arXiv:2102.11107, Schölkopf et
+al.), world models (arXiv:1803.10122, Ha & Schmidhuber). The probes test for causal vs. shortcut
+representations.
+
+Methods / evaluation references (supporting infrastructure, not the contribution): rliable
+(arXiv:2108.13264), SimplerEnv (arXiv:2405.05941), AutoEval (arXiv:2503.24278).
 
 ## 8. Limitations & honesty notes
 

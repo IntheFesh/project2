@@ -1,0 +1,10 @@
+condition,task_id,family,level,seed,success,instruction
+A,t1,viewpoint,2,0,1,correct
+A,t2,viewpoint,2,0,1,correct
+A,t3,viewpoint,2,0,0,correct
+A,t1,viewpoint,2,0,0,blank
+A,t2,viewpoint,2,0,0,blank
+A,t3,viewpoint,2,0,0,blank
+A,t1,viewpoint,2,0,1,shuffled
+A,t2,viewpoint,2,0,0,shuffled
+A,t3,viewpoint,2,0,0,shuffled

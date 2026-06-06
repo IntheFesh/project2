@@ -1,22 +1,26 @@
 # VLA-Collapse-Recover
 
-**Do open VLAs that ace clean LIBERO actually perceive the scene — or exploit shortcuts that break
-under a moved camera or changed lighting? And which training intervention most repairs that
-brittleness — *provably*?**
+**A reproducible *mechanistic probe* of VLA visual-representation quality under perturbation.** Open
+VLAs ace clean LIBERO but collapse under a moved camera or changed lighting. **Does
+perturbation-targeted LoRA fix the underlying representation (cross-family generalization, language
+conditioning), or only paper over symptoms on the trained families?** Single RTX 5090, < 5 days,
+delta-only.
 
-VLA-Collapse-Recover answers this with **two contributions**:
+**Two contributions:**
 
-1. **An honest, reproducible measurement** of visual-perturbation *collapse* and its *recovery* from
-   perturbation-targeted LoRA — comparing training interventions (A/B/C) with **paired statistics**,
-   a first-class **held-out generalization** test, and a **language-conditioning probe** of the
-   collapse mechanism.
-2. **A reusable paired-statistics evaluation harness/protocol** for VLA robustness
-   ([`eval/stats/`](eval/stats/) · [`docs/EVALUATION.md`](docs/EVALUATION.md)) — bootstrap CIs,
-   paired tests matched by task, Holm–Bonferroni, and rliable-style aggregates.
+1. **A reproducible measurement** of VLA visual-perturbation *collapse* and the *recovery* from
+   perturbation-targeted LoRA fine-tuning — on a single GPU, under 5 days.
+2. **A diagnostic-probe battery** — held-out cross-family generalization + language-conditioning
+   sensitivity + (optional) visual-feature-shift — that distinguishes **representation-level fixing
+   from symptom patching**. Canonical description: [`docs/PROBES.md`](docs/PROBES.md).
 
-> **Headline = the intervention comparison led by paired statistics**, not the recovery magnitude
-> (same-family recovery is expected by design). A research-engineering portfolio project, **not a
-> paper**; no novelty claimed — see [prior art](#prior-art-cited-no-novelty-claimed).
+The paired-statistics machinery (bootstrap CIs, McNemar, Holm–Bonferroni) is **supporting
+infrastructure** — shared with the author's prior project, PolicyArena (see
+[Honesty guards](#-honesty-guards-read-first)) — **not** a headline claim of this repo.
+
+> **Headline = the probe battery**, read *via* the A/B/C intervention comparison + paired statistics
+> (not the recovery magnitude — same-family recovery is expected by design). A research-engineering
+> portfolio project, **not a paper**; no novelty claimed — see [prior art](#prior-art-cited-no-novelty-claimed).
 
 ```bash
 git clone <this-repo> && cd vla-collapse-recover
@@ -53,14 +57,23 @@ git clone <this-repo> && cd vla-collapse-recover
 3. **In-distribution vs held-out is always labeled.** A perturbation family seen during augmentation
    is *in-dist*; one never seen is *held-out generalization*. In-dist recovery is **never** presented
    as generalization. (This is enforced in code by `classify_distribution`.)
-4. **Headline = intervention comparison**, led by paired statistics, not by recovery size.
+4. **Headline = the diagnostic-probe battery** (representation quality — see
+   [`docs/PROBES.md`](docs/PROBES.md)), read *via* the A/B/C comparison + paired statistics — not the
+   recovery magnitude, and not the statistics harness itself.
+
+> **Methodology & honesty (PolicyArena cross-reference).** Statistical infrastructure (paired
+> bootstrap, McNemar, Holm–Bonferroni) is shared with the author's prior project, **PolicyArena** — a
+> statistically-validated tool-calling + RAG agent for a Chinese enterprise service desk. This
+> repository's distinct contribution is the **visual representation quality diagnostic** (held-out
+> cross-family generalization + language-conditioning probe), not the statistical methodology.
 
 ---
 
 ## Headline result — Intervention comparison *(Phase 4–5)*  ·  `TBD`
 
 Perturbed success rate is averaged over the **in-distribution** augmented families
-(viewpoint / lighting / texture / noise). Paired at fixed init states; 3 seeds on the B/C(/D) comparison.
+(viewpoint / lighting / texture / noise). Paired at fixed **task IDs** (matched `(task_id, level, seed)`);
+3 LoRA-training seeds on the B/C(/D) comparison.
 
 | Condition | Training augmentation | Clean SR | Perturbed SR (in-dist avg) | Recovery | Δ_method vs **B** | 95% CI (Δ_method) | Holm *p* |
 |-----------|-----------------------|:--------:|:--------------------------:|:--------:|:-----------------:|:-----------------:|:--------:|
@@ -69,7 +82,19 @@ Perturbed success rate is averaged over the **in-distribution** augmented famili
 | **C** — LoRA + perturbation-targeted aug | aug aligned to eval families | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
 | **D** — feature-modulation adapter *(STRETCH)* | FTM/FLA-style | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
 
-*Δ_method (C − B) at fixed init states is the lead statistic — the 5–10pp gap a paired test makes detectable.*
+*Δ_method (C − B), paired at fixed task IDs, is the lead statistic — the 5–10pp gap a paired test makes detectable.*
+
+### Headline diagnostic probes  ·  `TBD`  — see [`docs/PROBES.md`](docs/PROBES.md)
+
+These two rows — **not** the recovery magnitude — are the contribution: they say *whether* LoRA fixed
+the representation or only patched symptoms.
+
+| Probe | Quantity | Value |
+|-------|----------|:-----:|
+| **Held-out cross-family generalization** | `generalization_gap` = Recovery_C(in-dist) − Recovery_C(held-out) | `TBD` |
+| **Language-conditioning sensitivity** | `SR_correct − SR_ablated` (paired at task IDs) | `TBD` |
+
+*Small gen-gap **and** rising language sensitivity ⇒ representation-level fix; otherwise symptom patching.*
 
 ## Collapse curve — base model under perturbation *(Phase 2, condition A, 1 seed)*  ·  `TBD`
 
@@ -227,7 +252,8 @@ Everything here needs only `uv sync` (no GPU, no big downloads).
 ./run.sh test          # ruff check . && pytest -q   (currently: all green)
 ```
 
-**(b) The statistics API** — fully implemented; this is the project's differentiator. Example:
+**(b) The statistics API** — fully implemented (supporting infrastructure, shared with PolicyArena;
+*not* the headline — see [`docs/PROBES.md`](docs/PROBES.md)). Example:
 ```python
 from eval.metrics import success_rate, delta_method
 from eval.paired import mcnemar, paired_bootstrap_delta
@@ -367,7 +393,7 @@ Let `SR` = success rate = (successful episodes / total episodes). For a model *M
 - **Recovery** of intervention *M* on a perturbed family =
   `(SR_M^pert − SR_A^pert) / (SR_A^clean − SR_A^pert)` — fraction of the base model's lost performance
   restored. `1.0` ⇒ back to base's clean level; can exceed 1.0. (Zero-collapse denominator returns NaN.)
-- **Δ_method** (headline) = `SR_C^pert − SR_B^pert`, computed **paired at fixed init states**.
+- **Δ_method** = `SR_C^pert − SR_B^pert`, computed **paired at fixed task IDs** (matched `(task_id, level, seed)`).
 
 Implemented in [`eval/metrics.py`](eval/metrics.py); CIs/tests in [`eval/bootstrap.py`](eval/bootstrap.py),
 [`eval/paired.py`](eval/paired.py), [`eval/holm.py`](eval/holm.py).
@@ -402,7 +428,7 @@ LoRA training + all rollout evals + the 3-seed comparison.
 | 2 | Perturbation suite + collapse curve (output #1) | 🟡 selector done; env seam |
 | 3 | Augmentation + LoRA training | 🟡 aug magnitudes done; train seam |
 | 4 | Recovery curve + intervention comparison (**headline**, output #2) | ⬜ needs 1–3 |
-| **5** | Statistics: bootstrap / paired / Holm (**differentiator**) | ✅ implemented & tested; ⬜ awaiting data |
+| **5** | Statistics: bootstrap / paired / Holm (supporting infra) | ✅ implemented & tested; ⬜ awaiting data |
 | 6 | Demo videos (output #3) | 🟡 seam |
 | 7 | Report + repo polish | 🟡 README + report skeletons |
 | 8 | STRETCH: cross-family · π0.5 · feature-mod D · OpenVLA-OFT | ⬜ |
@@ -436,21 +462,28 @@ See the annotated [Repository map](#3-repository-map-what-each-piece-does) above
 - **SmolVLA — arXiv 2506.01844**: the ~450M base model (LeRobot); chosen so the whole study fits a
   single RTX 5090 in < 5 days — the tight scope is a deliberate *scoping-discipline* feature.
 
-**Positioning lineage (evaluation methodology).** The eval harness is the VLA-manipulation analogue
-of statistically-honest RL/robot evaluation:
+**Positioning lineage (the contribution): representation quality.** The diagnostic battery sits in
+the lineage of work on *what a network actually represents*:
 
-- **rliable / "Statistical Precipice" — arXiv 2108.13264** (Agarwal et al., NeurIPS 2021): report
-  effect sizes with uncertainty (CIs, IQM), not bare point scores — the methodological north star.
-- **SimplerEnv — arXiv 2405.05941**: simulation-based, reproducible policy evaluation.
-- **AutoEval — arXiv 2503.24278** (Zhou et al., CoRL 2025): scalable, reproducible real-world policy
-  evaluation. This project is a *perturbation-robustness* analogue with paired statistics.
+- **Shortcut learning — arXiv 2004.07780** (Geirhos et al., Nat. Mach. Intell. 2020): networks
+  exploit non-causal shortcuts that break under distribution shift — exactly the collapse we probe.
+- **Causal representation learning — arXiv 2102.11107** (Schölkopf et al., Proc. IEEE 2021): the
+  frame for "causal vs. shortcut" features and why causal representations transfer.
+- **World models — arXiv 1803.10122** (Ha & Schmidhuber, 2018): the conceptual target — a policy
+  whose internal representation *models the scene* rather than memorising pixels.
 
-**Why robustness is the right lens (world models).** Perturbation robustness is a proxy for whether
-a policy's implicit representation is **causal** (it models the scene) or **shortcut-based** (it
-latches onto spurious correlations a moved camera or new texture destroys). Collapse under visual
-perturbation is evidence of shortcut learning; recovery that **generalizes to held-out families** is
-weak evidence of a more reliable, world-model-like representation. We *measure* this, honestly,
-rather than claim it.
+**Why this lens (world models).** Perturbation robustness, **language conditioning**, and
+**cross-family generalization** are *joint* proxies for whether the policy's implicit representation
+is **causal** (models the scene) or **shortcut-based** (latches onto spurious cues a moved camera /
+new texture / shuffled instruction destroys). A representation-level fix should improve all three
+*together*; a symptom patch raises in-dist success while held-out generalization and language
+sensitivity stay flat. The probe battery measures these observable consequences directly — we do not
+*claim* causality, we *test* for it.
+
+**Methods & evaluation references (supporting infrastructure, not the contribution).** The statistics
+follow standard reproducible-evaluation practice — **rliable / "Statistical Precipice"
+(arXiv:2108.13264)**, **SimplerEnv (arXiv:2405.05941)**, **AutoEval (arXiv:2503.24278)** — and the
+paired-stats code is shared with the author's prior **PolicyArena** project (see Honesty guards).
 
 Train-time augmentation and eval-time perturbation share a *family* but stay on *separate splits*.
 
