@@ -1,15 +1,22 @@
 # VLA-Collapse-Recover
 
-**A reproducible empirical study of visual-perturbation robustness in open Vision-Language-Action (VLA) models.**
+**Do open VLAs that ace clean LIBERO actually perceive the scene — or exploit shortcuts that break
+under a moved camera or changed lighting? And which training intervention most repairs that
+brittleness — *provably*?**
 
-Open VLAs score high on *clean* LIBERO but **collapse** under visual / viewpoint perturbations
-(documented across multiple independent 2025–2026 papers). This repo (A) reproduces that collapse,
-(B) **recovers** it via perturbation-augmented LoRA fine-tuning, (C) compares training interventions
-with **rigorous paired statistics**, and (D) produces before/after rollout demo videos.
+VLA-Collapse-Recover answers this with **two contributions**:
 
-> **The headline is the *intervention comparison* (A/B/C), not the recovery magnitude.** Same-family
-> recovery is expected; the contribution is a clean, reproducible study with honest statistics.
-> This is a **research-engineering portfolio project**, not a paper. No novelty is claimed.
+1. **An honest, reproducible measurement** of visual-perturbation *collapse* and its *recovery* from
+   perturbation-targeted LoRA — comparing training interventions (A/B/C) with **paired statistics**,
+   a first-class **held-out generalization** test, and a **language-conditioning probe** of the
+   collapse mechanism.
+2. **A reusable paired-statistics evaluation harness/protocol** for VLA robustness
+   ([`eval/stats/`](eval/stats/) · [`docs/EVALUATION.md`](docs/EVALUATION.md)) — bootstrap CIs,
+   paired tests matched by task, Holm–Bonferroni, and rliable-style aggregates.
+
+> **Headline = the intervention comparison led by paired statistics**, not the recovery magnitude
+> (same-family recovery is expected by design). A research-engineering portfolio project, **not a
+> paper**; no novelty claimed — see [prior art](#prior-art-cited-no-novelty-claimed).
 
 ```bash
 git clone <this-repo> && cd vla-collapse-recover
@@ -81,7 +88,27 @@ Perturbed success rate is averaged over the **in-distribution** augmented famili
 | lighting  | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
 | texture   | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
 | noise     | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| *(held-out family, STRETCH cross-family test)* | held-out | `TBD` | `TBD` | `TBD` | `TBD` |
+| **layout (held-out)** | **held-out** | `TBD` | `TBD` | `TBD` | `TBD` |
+
+**Generalization gap** (Recovery_C on in-dist − Recovery_C on held-out): `TBD`. A **first-class
+result**: it tests whether Condition C genuinely generalizes or merely overfits its augmentation
+family (the "did you just train on the test perturbation?" red flag). Families are tagged in-dist
+vs held-out by `classify_distribution`; see `generalization_gap` in [`eval/metrics.py`](eval/metrics.py).
+
+## Language-conditioning probe — *why* collapse happens *(mechanism, Phase 6)*  ·  `TBD`
+
+A cheap, high-signal probe of the collapse *mechanism*: run the **same task IDs** under
+correct / blank / shuffled / mismatched instructions and measure **paired** ΔSR
+(`language_sensitivity` in [`eval/probe.py`](eval/probe.py), matched per task ID). ΔSR ≈ 0 ⇒ the
+policy effectively ignores language (a vision-action model), echoing the LIBERO-Plus / LIBERO-PRO
+finding that VLAs largely ignore instructions.
+
+| Instruction | SR | paired ΔSR vs correct | 95% CI | McNemar *p* |
+|---|:--:|:--:|:--:|:--:|
+| correct | `TBD` | — | — | — |
+| blank | `TBD` | `TBD` | `TBD` | `TBD` |
+| shuffled | `TBD` | `TBD` | `TBD` | `TBD` |
+| mismatched | `TBD` | `TBD` | `TBD` | `TBD` |
 
 ---
 
@@ -136,27 +163,31 @@ vla-collapse-recover/
 ├── requirements-gpu.txt        ✅ pinned cu128 torch/torchvision (rental)
 ├── configs/                    ✅ config-driven (YAML): model/ lora/ perturb/ eval/
 ├── perturb/
-│   └── libero_plus_wrapper.py  ✅ PerturbSpec selector + in-dist/held-out tagger
-│                               🟡 make_perturbed_env (Phase 2 seam: LIBERO-Plus env)
+│   ├── libero_plus_constants.py ✅ single source of truth: family↔category, levels, JSON path
+│   └── libero_plus_wrapper.py  ✅ task-selection (parse/group/select) + in-dist/held-out tagger
+│                               🟡 make_perturbed_env(task_id) (Phase 2 env seam)
 ├── data/
-│   ├── prepare_libero_subset.py ✅ select_subset / write_task_subset  🟡 task enumeration (P1–2)
+│   ├── prepare_libero_subset.py ✅ parse task_classification.json + select  🟡 locate-JSON seam
 │   └── augment/visual_aug.py    ✅ aligned_magnitude  🟡 torchvision transforms (Phase 3)
 ├── train/
 │   ├── train_lora.py           🟡 LoRA fine-tune (Phase 3 seam)
 │   └── feature_mod.py          🟡 feature-mod adapter (Phase 8 / STRETCH seam)
 ├── eval/
-│   ├── metrics.py              ✅ SR, Δ_robust, Recovery, Δ_method
-│   ├── bootstrap.py paired.py holm.py  ✅ stats (the differentiator)
-│   ├── budget.py               ✅ GPU-day budget estimator
-│   ├── run_rollout.py          🟡 rollout eval (Phase 1 seam)
+│   ├── metrics.py              ✅ SR, Δ_robust, Recovery, Δ_method, generalization_gap
+│   ├── bootstrap.py paired.py holm.py  ✅ stats primitives
+│   ├── stats/                  ✅ public paired-stats facade + report builder (the harness)
+│   ├── budget.py               ✅ GPU-day budget estimator (task-instance units)
+│   ├── probe.py                ✅ language-conditioning probe (rollout = seam)
+│   ├── run_rollout.py          ✅ plan/row/CSV pure · 🟡 policy+sim seam (1 trial/task)
 │   └── record_demo.py          🟡 demo recorder (Phase 6 seam)
 ├── scripts/
 │   ├── verify_env.py           ✅ asserts sm_120 / cu128 / torch≥2.7 / LeRobot
-│   ├── estimate_budget.py      ✅ budget gate CLI (exits non-zero if over the cap)
-│   └── smoke_timing.py         ✅ time a rollout → project the budget (live part = P1 seam)
+│   ├── estimate_budget.py · smoke_timing.py  ✅ budget gate + smoke timing
+│   └── analyze_results.py      ✅ rollout CSV → full paired-stats report (text + JSON)
+├── docs/                       LIBERO_PLUS_NOTES.md · EVALUATION.md
 ├── analysis/                   eval summaries (CSV/JSON) + demos/ (a few clips)
-├── report/                     technical_report.md · one_pager.md
-└── tests/                      ✅ off-GPU smoke tests (run with `./run.sh test`)
+├── report/                     technical_report.md · one_pager.md · results_card.md
+└── tests/                      ✅ off-GPU tests + fixtures/ (run with `./run.sh test`)
 ```
 
 ## 4. Experimental design (the concepts you need)
@@ -169,6 +200,11 @@ vla-collapse-recover/
 | **B** | LoRA + standard aug | LoRA fine-tune with *generic* torchvision augmentation |
 | **C** | LoRA + targeted aug | LoRA fine-tune with augmentation whose **family & magnitude mirror the eval perturbations** |
 | **D** | feature-mod (STRETCH) | a small FTM/FLA-style feature-modulation adapter instead of LoRA |
+
+> **Caveat (Condition C).** torchvision augmentation is a *weak 2-D proxy* for LIBERO-Plus's true
+> **3-D `viewpoint`** perturbation — a single frame cannot reproduce a moved camera. It remains the
+> default; the honest alternative (fine-tuning C on LIBERO-Plus's released perturbation training
+> data) is documented in the report's limitations and stubbed in `configs/lora/`.
 
 **In-distribution vs held-out.** Training augmentation and evaluation perturbation share a *family*
 (e.g. both use "lighting") but live on *separate data splits*. A family used in augmentation is
@@ -256,6 +292,14 @@ routes all model/dataset caches to the big data disk `/root/autodl-tmp`, turns o
 **academic network acceleration** + the `hf-mirror.com` endpoint, then installs LeRobot +
 LIBERO-Plus, verifies `sm_120`, runs the tests, and gates the budget.
 
+The LIBERO-Plus step does the full install its README requires (not just `pip install -e`):
+apt system libs (`libexpat1`, `libfontconfig1-dev`, `libpython3-stdlib`, `libmagickwand-dev` —
+ImageMagick/Wand backs the texture/background perturbations; installed only if root/sudo, else the
+exact command is printed), `pip install -r extra_requirements.txt`, and the **`assets.zip`**
+download from the HF dataset `Sylvest/LIBERO-plus` unzipped to `<checkout>/libero/libero/assets/`
+(idempotent, mirror-aware). **Run deploy + the asset download in 无卡模式 (no-GPU mode)** to keep
+these multi-GB downloads off the GPU clock, then switch to GPU mode for rollouts.
+
 ```bash
 # clone onto the big data disk; use tmux so an SSH drop won't kill a long run
 cd /root/autodl-tmp && git clone -b claude/confident-lovelace-4ddWN <your-repo-url> vcr && cd vcr
@@ -268,7 +312,8 @@ python3 deploy.py             # full deploy with AutoDL-friendly defaults
 Tips: choose an AutoDL image with **CUDA 12.8 / PyTorch ≥ 2.7** (otherwise `deploy.py` warns and you
 can add `--install-torch`); do downloads/setup in **无卡模式 (no-GPU mode)** to save GPU-hours, then
 switch to GPU mode for rollouts. Useful flags: `--stage core` (off-GPU only), `--budget-only`,
-`--no-accel`, `--no-hf-mirror`, `--skip-libero-plus`, `--data-dir PATH`.
+`--no-accel`, `--no-hf-mirror`, `--skip-lerobot`, `--skip-libero-plus`, `--skip-apt`,
+`--skip-assets`, `--data-dir PATH`.
 
 ## 7. Phase-by-phase execution guide
 
@@ -388,6 +433,26 @@ See the annotated [Repository map](#3-repository-map-what-each-piece-does) above
 - **arXiv 2510.03827 — LIBERO-PRO**: memorization-exposing benchmark (≈0% floor); stress/citation only.
 - **arXiv 2512.02902 — FTM/FLA-style feature modulation**: basis for STRETCH condition D.
 - **arXiv 2510.17640 — RESample-style augmentation**: basis for perturbation-aligned augmentation.
+- **SmolVLA — arXiv 2506.01844**: the ~450M base model (LeRobot); chosen so the whole study fits a
+  single RTX 5090 in < 5 days — the tight scope is a deliberate *scoping-discipline* feature.
+
+**Positioning lineage (evaluation methodology).** The eval harness is the VLA-manipulation analogue
+of statistically-honest RL/robot evaluation:
+
+- **rliable / "Statistical Precipice" — arXiv 2108.13264** (Agarwal et al., NeurIPS 2021): report
+  effect sizes with uncertainty (CIs, IQM), not bare point scores — the methodological north star.
+- **SimplerEnv — arXiv 2405.05941**: simulation-based, reproducible policy evaluation.
+- **AutoEval — arXiv 2503.24278** (Zhou et al., CoRL 2025): scalable, reproducible real-world policy
+  evaluation. This project is a *perturbation-robustness* analogue with paired statistics.
+
+**Why robustness is the right lens (world models).** Perturbation robustness is a proxy for whether
+a policy's implicit representation is **causal** (it models the scene) or **shortcut-based** (it
+latches onto spurious correlations a moved camera or new texture destroys). Collapse under visual
+perturbation is evidence of shortcut learning; recovery that **generalizes to held-out families** is
+weak evidence of a more reliable, world-model-like representation. We *measure* this, honestly,
+rather than claim it.
+
+Train-time augmentation and eval-time perturbation share a *family* but stay on *separate splits*.
 
 ## License
 

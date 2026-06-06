@@ -54,6 +54,12 @@ LEROBOT_FALLBACK = "lerobot @ git+https://github.com/huggingface/lerobot"
 LIBERO_PLUS_URL = "https://github.com/sylvestf/LIBERO-plus"  # official repo (arXiv 2510.13626)
 HF_MIRROR = "https://hf-mirror.com"
 
+# --- LIBERO-Plus install specifics (VERIFIED; see docs/LIBERO_PLUS_NOTES.md) ---
+APT_PACKAGES = ["libexpat1", "libfontconfig1-dev", "libpython3-stdlib", "libmagickwand-dev"]
+LIBERO_PLUS_ASSETS_REPO = "Sylvest/LIBERO-plus"          # HF dataset (repo_type="dataset")
+LIBERO_PLUS_ASSETS_FILE = "assets.zip"                   # unzip -> <checkout>/libero/libero/assets/
+LIBERO_CONFIG_PATH = Path("/root/.libero/config.yaml")   # libero_config_path
+
 # ---------------------------------------------------------------- logging --
 _TTY = sys.stdout.isatty()
 
@@ -241,16 +247,93 @@ def install_lerobot(spec: str) -> None:
         pip_install([LEROBOT_FALLBACK])
 
 
-def install_libero_plus(url: str, path: Path | None) -> None:
+def install_apt_deps(skip: bool) -> None:
+    """Install LIBERO-Plus system libs via apt (root/sudo only); degrade gracefully otherwise."""
+    manual = "apt-get update && apt-get install -y " + " ".join(APT_PACKAGES)
+    if skip:
+        warn("apt deps skipped (--skip-apt). Manual:\n  " + manual)
+        return
+    apt = shutil.which("apt-get")
+    if not apt:
+        warn("apt-get not found; install these manually:\n  " + manual)
+        return
+    is_root = hasattr(os, "geteuid") and os.geteuid() == 0
+    prefix: list[str] = []
+    if not is_root:
+        sudo = shutil.which("sudo")
+        if not sudo:
+            warn("not root and no sudo; install manually:\n  " + manual)
+            return
+        prefix = [sudo]
+    run([*prefix, apt, "update"], env=os.environ.copy(), check=False)
+    run([*prefix, apt, "install", "-y", *APT_PACKAGES], env=os.environ.copy(), check=False)
+
+
+def install_extra_requirements(libero_dir: Path) -> None:
+    """`pip install -r extra_requirements.txt` from the LIBERO-Plus checkout (if present)."""
+    req = libero_dir / "extra_requirements.txt"
+    if not req.is_file():
+        warn(f"{req} not found; skipping extra_requirements (verify the checkout).")
+        return
+    pip_install(["-r", str(req)])
+
+
+def download_assets(libero_dir: Path, skip: bool) -> None:
+    """Download + unzip assets.zip into <checkout>/libero/libero/ (idempotent, no-GPU-friendly)."""
+    if skip:
+        warn("assets skipped (--skip-assets).")
+        return
+    target = libero_dir / "libero" / "libero" / "assets"
+    if target.is_dir() and any(target.iterdir()):
+        ok(f"assets already present at {target} (skip).")
+        return
+    # Run via subprocess so deploy.py stays stdlib-only; huggingface_hub comes from the GPU stage
+    # and respects HF_ENDPOINT (hf-mirror) + the data-dir HF cache set in setup_storage().
+    code = (
+        "import sys, os, zipfile\n"
+        "from pathlib import Path\n"
+        "from huggingface_hub import hf_hub_download\n"
+        "dest = Path(sys.argv[1]) / 'libero' / 'libero'\n"
+        "dest.mkdir(parents=True, exist_ok=True)\n"
+        "print('HF_ENDPOINT=' + os.environ.get('HF_ENDPOINT', '(default)'))\n"
+        "zp = hf_hub_download(repo_id=sys.argv[2], filename=sys.argv[3], repo_type='dataset')\n"
+        "print('unzip', zp, '->', dest)\n"
+        "zipfile.ZipFile(zp).extractall(dest)\n"
+        "print('assets ready at', dest / 'assets')\n"
+    )
+    log(f"downloading {LIBERO_PLUS_ASSETS_FILE} from HF dataset {LIBERO_PLUS_ASSETS_REPO}")
+    run([sys.executable, "-c", code, str(libero_dir), LIBERO_PLUS_ASSETS_REPO,
+         LIBERO_PLUS_ASSETS_FILE], env=os.environ.copy(), check=False)
+
+
+def check_libero_config(libero_dir: Path) -> None:
+    """Report on /root/.libero/config.yaml (libero_config_path); never crash, never blind-patch."""
+    cfg = LIBERO_CONFIG_PATH
+    if cfg.exists():
+        ok(f"{cfg} present -- ensure libero_config_path points at {libero_dir} "
+           "(TODO(verify) exact keys; not auto-patched to avoid corruption).")
+    else:
+        warn(f"{cfg} absent -- LIBERO writes it on first `import libero`; then set "
+             f"libero_config_path to {libero_dir}.")
+
+
+def install_libero_plus(
+    url: str, path: Path | None, *, skip_apt: bool, skip_assets: bool
+) -> None:
+    """Install LIBERO-Plus end to end: apt deps, editable install, extra reqs, assets, config."""
     target = path or (REPO / "third_party" / "LIBERO-plus")
+    install_apt_deps(skip_apt)
     if not target.exists():
         if not url:
             warn(f"LIBERO-Plus not present at {target} and no URL given -- skipping. "
-                 f"Clone {LIBERO_PLUS_URL} there, then: pip install -e {target}")
+                 f"Clone {LIBERO_PLUS_URL} there, then re-run.")
             return
         target.parent.mkdir(parents=True, exist_ok=True)
         run(["git", "clone", "--depth", "1", url, str(target)], env=os.environ.copy())
     pip_install([str(target)], editable=True)
+    install_extra_requirements(target)
+    download_assets(target, skip_assets)
+    check_libero_config(target)
     ok("LIBERO-Plus installed (drop-in replacement for `libero`).")
 
 
@@ -290,8 +373,9 @@ def print_summary(info: dict, gpu_ready: bool, tests_ok: bool) -> None:
           "--train-hours-per-run 4")
     print("  2) Keep heavy work inside tmux (AutoDL SSH can drop):  tmux new -s vcr")
     if info["is_autodl"]:
-        print("  3) AutoDL tip: do downloads/setup in 无卡模式 (no-GPU mode) to save GPU-hours, "
-              "then switch the instance to GPU mode for rollouts/training.")
+        print("  3) AutoDL tip: run deploy + the LIBERO-Plus assets.zip download in 无卡模式 "
+              "(no-GPU mode) to keep multi-GB downloads off the GPU clock, then switch to GPU "
+              "mode for rollouts/training.")
 
 
 # ------------------------------------------------------------------- main --
@@ -312,6 +396,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Force-install cu128 torch even if a suitable one is present.")
     p.add_argument("--skip-lerobot", action="store_true")
     p.add_argument("--skip-libero-plus", action="store_true")
+    p.add_argument("--skip-apt", action="store_true",
+                   help="Skip apt system libs (libmagickwand-dev etc.); prints the manual command.")
+    p.add_argument("--skip-assets", action="store_true",
+                   help="Skip the LIBERO-Plus assets.zip download/unzip.")
     p.add_argument("--libero-plus-url", default=LIBERO_PLUS_URL)
     p.add_argument("--libero-plus-path", default=None, help="Use an existing local LIBERO-Plus checkout.")
     p.add_argument("--sec-per-episode", type=float, default=30.0, help="Budget step: per-episode seconds.")
@@ -343,7 +431,13 @@ def main(argv: list[str] | None = None) -> int:
             plan = (["storage + network", *plan[:1]]
                     + ["ensure cu128 torch (reuse if suitable)", "gpu-adjacent deps"]
                     + ([] if args.skip_lerobot else ["LeRobot from source"])
-                    + ([] if args.skip_libero_plus else ["LIBERO-Plus from source"])
+                    + ([] if args.skip_libero_plus else [
+                        "LIBERO-Plus: apt libs" + (" (skipped)" if args.skip_apt else ""),
+                        "LIBERO-Plus: git clone + pip install -e + extra_requirements.txt",
+                        "LIBERO-Plus: download+unzip assets.zip"
+                        + (" (skipped)" if args.skip_assets else ""),
+                        "LIBERO-Plus: check /root/.libero/config.yaml",
+                    ])
                     + ["verify_env (sm_120)", "run tests", "budget gate"])
         for i, s in enumerate(plan, 1):
             print(f"  plan[{i}] {s}")
@@ -383,7 +477,8 @@ def main(argv: list[str] | None = None) -> int:
         warn("skipped (--skip-libero-plus)")
     else:
         install_libero_plus(args.libero_plus_url,
-                            Path(args.libero_plus_path) if args.libero_plus_path else None)
+                            Path(args.libero_plus_path) if args.libero_plus_path else None,
+                            skip_apt=args.skip_apt, skip_assets=args.skip_assets)
     step(6, total, "Verify GPU env (sm_120 / cu128 / torch>=2.7 / LeRobot)")
     gpu_ready = verify_env()
     step(7, total, "Run tests")

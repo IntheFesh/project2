@@ -4,7 +4,13 @@ import math
 
 import pytest
 
-from eval.metrics import delta_method, delta_robust, recovery, success_rate
+from eval.metrics import (
+    delta_method,
+    delta_robust,
+    generalization_gap,
+    recovery,
+    success_rate,
+)
 
 
 def test_success_rate_basic() -> None:
@@ -44,3 +50,14 @@ def test_rate_validation_rejects_out_of_range() -> None:
         delta_robust(1.5, 0.2)
     with pytest.raises(ValueError):
         recovery(0.5, -0.1, 0.9)
+
+
+def test_generalization_gap() -> None:
+    # recovers 80% of collapse in-dist but only 30% held-out -> 0.5 gap (overfit to aug).
+    assert generalization_gap(0.8, 0.3) == pytest.approx(0.5)
+    assert generalization_gap(0.5, 0.5) == pytest.approx(0.0)  # generalizes
+
+
+def test_generalization_gap_nan_propagates() -> None:
+    assert math.isnan(generalization_gap(math.nan, 0.3))
+    assert math.isnan(generalization_gap(0.5, math.nan))

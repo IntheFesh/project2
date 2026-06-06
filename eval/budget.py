@@ -1,12 +1,18 @@
-"""GPU-day budget estimation for the rollout/eval matrix (rental planning).
+"""GPU-day budget estimation for the LIBERO-Plus task-instance eval matrix (rental planning).
 
-Pure Python / numpy; off-GPU. Used to confirm the planned matrix fits the **< 5-day** GPU
-cap BEFORE opening the rental (build-plan Phase 3 gate), and to size episodes/tasks once a
-per-episode wall-clock has been measured by a smoke test.
+Pure Python / numpy; off-GPU. Confirms the matrix fits the **< 5-day** GPU cap BEFORE renting,
+and sizes ``instances_per_cell`` once a per-task-trial wall-clock has been measured by a smoke test.
 
-Rollouts are serial on a single card, so total wall-clock ~= total_episodes * sec_per_episode
-(+ training time). The headline B/C(/D) comparison uses multiple seeds; the collapse curve
-(condition A) needs only one.
+**Task-SELECTION semantics.** The eval unit is a pre-built LIBERO-Plus task instance run **once**
+(``num_trials_per_task = 1``). Per ``(category, level)`` cell we evaluate ``instances_per_cell``
+task IDs; conditions A/B/C are run on the **same** task-ID set (paired by ``task_id``). So::
+
+    total_units = total_seeds * (clean_instances + n_cells * instances_per_cell)
+    n_cells     = n_families * n_levels
+
+``sec_per_episode`` is the serial wall-clock per task trial (one unit). A "seed" for B/C is an
+independent LoRA training run evaluated on the same task-ID set (training-init variance); the
+collapse curve (A) needs only one seed.
 """
 
 from __future__ import annotations
@@ -22,7 +28,7 @@ __all__ = [
     "DEFAULT_CAP_DAYS",
     "RolloutMatrix",
     "project_budget",
-    "max_episodes_per_task",
+    "max_instances_per_cell",
     "summarize_episode_times",
     "format_report",
 ]
@@ -33,22 +39,29 @@ DEFAULT_CAP_DAYS = 5.0
 
 @dataclass(frozen=True)
 class RolloutMatrix:
-    """The rollout/eval matrix dimensions for budget estimation.
+    """The task-instance eval matrix for budget estimation.
 
-    ``seeds_per_condition`` maps a condition label to its seed count, e.g.
-    ``{"A": 1, "B": 3, "C": 3}`` (collapse curve A = 1 seed; comparison B/C = 3 seeds).
-    Every condition is assumed to evaluate the same settings (clean + families x levels).
+    Args:
+        instances_per_cell: pre-built task IDs sampled per ``(category, level)`` cell.
+        n_families: number of perturbation families evaluated (trained + held-out).
+        n_levels: number of difficulty levels per family.
+        seeds_per_condition: ``{condition: seed_count}``, e.g. ``{"A": 1, "B": 3, "C": 3}``
+            (A = collapse curve, 1 seed; B/C = comparison, 3 LoRA-training seeds each).
+        clean_instances: clean/original LIBERO task instances evaluated per seed (0 = skip clean).
+        extra_units: flat additional eval units not tied to the per-seed matrix -- e.g. the
+            language-conditioning probe's extra instruction passes over the base model (Workstream 6).
     """
 
-    n_tasks: int
-    n_episodes_per_task: int
+    instances_per_cell: int
     n_families: int
     n_levels: int
     seeds_per_condition: Mapping[str, int]
-    include_clean: bool = True
+    clean_instances: int = 0
+    extra_units: int = 0
 
     def __post_init__(self) -> None:
-        for name in ("n_tasks", "n_episodes_per_task", "n_families", "n_levels"):
+        for name in ("instances_per_cell", "n_families", "n_levels", "clean_instances",
+                     "extra_units"):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be >= 0")
         if not self.seeds_per_condition:
@@ -56,18 +69,19 @@ class RolloutMatrix:
         if any(s < 0 for s in self.seeds_per_condition.values()):
             raise ValueError("seed counts must be >= 0")
 
-    def n_settings(self) -> int:
-        """Number of eval settings per seed: clean (optional) + families x levels."""
-        return (1 if self.include_clean else 0) + self.n_families * self.n_levels
+    def n_cells(self) -> int:
+        """Number of ``(family, level)`` cells = ``n_families * n_levels``."""
+        return self.n_families * self.n_levels
 
     def total_seeds(self) -> int:
         return sum(self.seeds_per_condition.values())
 
-    def episodes_per_seed(self) -> int:
-        return self.n_settings() * self.n_tasks * self.n_episodes_per_task
+    def units_per_seed(self) -> int:
+        """Eval units (task trials) per seed: clean + perturbed cells."""
+        return self.clean_instances + self.n_cells() * self.instances_per_cell
 
-    def total_episodes(self) -> int:
-        return self.episodes_per_seed() * self.total_seeds()
+    def total_units(self) -> int:
+        return self.units_per_seed() * self.total_seeds() + self.extra_units
 
 
 def project_budget(
@@ -81,27 +95,26 @@ def project_budget(
     """Project total GPU-days for ``matrix`` and whether it fits ``cap_days``.
 
     Args:
-        matrix: the rollout/eval matrix.
-        sec_per_episode: measured (or assumed) serial per-episode wall-clock in seconds.
+        matrix: the task-instance eval matrix.
+        sec_per_episode: measured (or assumed) serial wall-clock per task trial, in seconds.
         n_train_runs: number of LoRA training runs (e.g. conditions B,C x seeds).
         train_hours_per_run: measured (or assumed) wall-clock per training run, in hours.
         cap_days: the hard GPU-rental cap (default 5 days).
 
     Returns:
-        Dict with episode counts and eval/train/total GPU-days plus a ``fits`` bool.
+        Dict with unit counts and eval/train/total GPU-days plus a ``fits`` bool.
     """
     if sec_per_episode < 0 or train_hours_per_run < 0 or n_train_runs < 0:
         raise ValueError("timings and run counts must be non-negative")
 
-    total_episodes = matrix.total_episodes()
-    eval_seconds = total_episodes * sec_per_episode
+    total_units = matrix.total_units()
+    eval_seconds = total_units * sec_per_episode
     train_seconds = n_train_runs * train_hours_per_run * 3600.0
-    total_seconds = eval_seconds + train_seconds
-    total_days = total_seconds / SECONDS_PER_DAY
+    total_days = (eval_seconds + train_seconds) / SECONDS_PER_DAY
     return {
-        "total_episodes": total_episodes,
-        "episodes_per_seed": matrix.episodes_per_seed(),
-        "n_settings": matrix.n_settings(),
+        "total_units": total_units,
+        "units_per_seed": matrix.units_per_seed(),
+        "n_cells": matrix.n_cells(),
         "total_seeds": matrix.total_seeds(),
         "eval_days": eval_seconds / SECONDS_PER_DAY,
         "train_days": train_seconds / SECONDS_PER_DAY,
@@ -111,7 +124,7 @@ def project_budget(
     }
 
 
-def max_episodes_per_task(
+def max_instances_per_cell(
     matrix: RolloutMatrix,
     *,
     sec_per_episode: float,
@@ -119,25 +132,27 @@ def max_episodes_per_task(
     train_hours_per_run: float = 0.0,
     cap_days: float = DEFAULT_CAP_DAYS,
 ) -> int:
-    """Largest ``n_episodes_per_task`` (all else fixed) that still fits ``cap_days``.
+    """Largest ``instances_per_cell`` (all else fixed) that still fits ``cap_days``.
 
-    Returns 0 if even one episode per task would exceed the cap (or training alone does).
+    Accounts for ``clean_instances`` and the seed/cell multipliers. Returns 0 if even one
+    instance per cell would exceed the cap (or training alone does).
     """
     if sec_per_episode <= 0:
-        raise ValueError("sec_per_episode must be > 0 to back-solve episodes")
+        raise ValueError("sec_per_episode must be > 0 to back-solve instances")
     train_seconds = n_train_runs * train_hours_per_run * 3600.0
     eval_seconds_available = cap_days * SECONDS_PER_DAY - train_seconds
     if eval_seconds_available <= 0:
         return 0
-    episodes_allowed = eval_seconds_available / sec_per_episode
-    per_task_denom = matrix.total_seeds() * matrix.n_settings() * matrix.n_tasks
-    if per_task_denom == 0:
+    units_allowed = eval_seconds_available / sec_per_episode
+    if matrix.total_seeds() == 0 or matrix.n_cells() == 0:
         return 0
-    return max(0, math.floor(episodes_allowed / per_task_denom))
+    per_seed_allowed = units_allowed / matrix.total_seeds()
+    x = (per_seed_allowed - matrix.clean_instances) / matrix.n_cells()
+    return max(0, math.floor(x))
 
 
 def summarize_episode_times(durations: Sequence[float]) -> dict:
-    """Summary stats (mean/median/p95/min/max) of per-episode wall-clock seconds.
+    """Summary stats (mean/median/p95/min/max) of per-task-trial wall-clock seconds.
 
     Used by the smoke-timing harness to feed :func:`project_budget` a robust
     ``sec_per_episode`` (p95 is a safe choice for a serial-card budget).
@@ -160,9 +175,9 @@ def format_report(projection: Mapping[str, float]) -> str:
     verdict = "FITS" if projection["fits"] else "EXCEEDS"
     return (
         f"Rollout/eval budget projection\n"
-        f"  episodes: {projection['total_episodes']:,} "
-        f"({projection['episodes_per_seed']:,}/seed x {projection['total_seeds']} seeds, "
-        f"{projection['n_settings']} settings)\n"
+        f"  units: {projection['total_units']:,} "
+        f"({projection['units_per_seed']:,}/seed x {projection['total_seeds']} seeds, "
+        f"{projection['n_cells']} cells)\n"
         f"  eval : {projection['eval_days']:.2f} GPU-days\n"
         f"  train: {projection['train_days']:.2f} GPU-days\n"
         f"  total: {projection['total_days']:.2f} / {projection['cap_days']:.1f} "

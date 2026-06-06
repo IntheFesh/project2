@@ -24,7 +24,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
-__all__ = ["success_rate", "delta_robust", "recovery", "delta_method"]
+__all__ = ["success_rate", "delta_robust", "recovery", "delta_method", "generalization_gap"]
 
 _RATE_TOL = 1e-9
 
@@ -93,3 +93,20 @@ def delta_method(sr_a: float, sr_b: float) -> float:
     sr_a = _check_rate(sr_a, "sr_a")
     sr_b = _check_rate(sr_b, "sr_b")
     return sr_a - sr_b
+
+
+def generalization_gap(recovery_in_dist: float, recovery_held_out: float) -> float:
+    """Cross-family generalization gap: ``recovery_in_dist - recovery_held_out``.
+
+    Both inputs are :func:`recovery` values (fractions of the base collapse restored) for the
+    *same* intervention, computed on **in-distribution** augmented families vs a **held-out**
+    family never seen during augmentation. A large positive gap means the intervention helps
+    in-dist far more than held-out (it overfits its augmentation); ``~0`` means it generalizes.
+
+    These are recovery ratios, not success rates, so no ``[0, 1]`` validation is applied (they may
+    be negative or exceed 1). Returns ``NaN`` if either recovery is ``NaN`` (undefined collapse),
+    consistent with :func:`recovery`.
+    """
+    if math.isnan(recovery_in_dist) or math.isnan(recovery_held_out):
+        return math.nan
+    return recovery_in_dist - recovery_held_out

@@ -26,7 +26,7 @@ from eval.budget import (
     project_budget,
     summarize_episode_times,
 )
-from scripts.estimate_budget import build_matrix
+from scripts.estimate_budget import add_matrix_args, build_matrix
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -46,18 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--smoke-tasks", type=int, default=2)
     p.add_argument("--smoke-episodes", type=int, default=5)
     p.add_argument("--perturb", default=None, help="'family:level' for the smoke rollout.")
-    # Budget projection args (matrix comes from configs; see estimate_budget).
-    p.add_argument("--eval-config", default="configs/eval/default.yaml")
-    p.add_argument("--perturb-config", default="configs/perturb/libero_plus.yaml")
     p.add_argument("--n-train-runs", type=int, default=None)
     p.add_argument("--train-hours-per-run", type=float, default=0.0)
     p.add_argument("--cap-days", type=float, default=DEFAULT_CAP_DAYS)
-    p.add_argument("--include-d", action="store_true")
-    p.add_argument("--n-tasks", type=int, default=None)
-    p.add_argument("--n-episodes", type=int, default=None)
-    p.add_argument("--n-families", type=int, default=None)
-    p.add_argument("--n-levels", type=int, default=None)
     p.add_argument("--out", default="analysis/runs/smoke_timing.json")
+    add_matrix_args(p)  # --eval-config, --instances-per-cell, --clean-instances, families/levels, -d
     return p
 
 
