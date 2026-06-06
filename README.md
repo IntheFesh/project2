@@ -130,7 +130,8 @@ The one-click script wraps both stages:
 
 ```
 vla-collapse-recover/
-├── run.sh                      ✅ one-click setup / test / verify / deploy
+├── run.sh                      ✅ one-click setup / test / verify / deploy (uv, general)
+├── deploy.py                   ✅ integrated one-click deploy (AutoDL-aware, single file)
 ├── pyproject.toml  uv.lock     ✅ two-stage deps (core + `gpu` extra); reproducible lock
 ├── requirements-gpu.txt        ✅ pinned cu128 torch/torchvision (rental)
 ├── configs/                    ✅ config-driven (YAML): model/ lora/ perturb/ eval/
@@ -247,6 +248,28 @@ is expected; it passes only on the card.
 > *"no kernel image is available for execution on the device."* **Do NOT use CUDA 13.x.** Prefer the
 > `pytorch/pytorch:2.x-cuda12.8-cudnn9` image and avoid runtime JIT of custom CUDA kernels.
 
+### 6.1 AutoDL one-click — `deploy.py`
+
+On an [AutoDL](https://www.autodl.com/) RTX 5090 instance, use the integrated, AutoDL-aware
+deployer. It **reuses the image's pre-installed cu128 PyTorch** (no multi-GB re-download),
+routes all model/dataset caches to the big data disk `/root/autodl-tmp`, turns on AutoDL
+**academic network acceleration** + the `hf-mirror.com` endpoint, then installs LeRobot +
+LIBERO-Plus, verifies `sm_120`, runs the tests, and gates the budget.
+
+```bash
+# clone onto the big data disk; use tmux so an SSH drop won't kill a long run
+cd /root/autodl-tmp && git clone -b claude/confident-lovelace-4ddWN <your-repo-url> vcr && cd vcr
+tmux new -s vcr
+
+python3 deploy.py --check     # DRY RUN: detect GPU/torch/AutoDL + print the plan (installs nothing)
+python3 deploy.py             # full deploy with AutoDL-friendly defaults
+```
+
+Tips: choose an AutoDL image with **CUDA 12.8 / PyTorch ≥ 2.7** (otherwise `deploy.py` warns and you
+can add `--install-torch`); do downloads/setup in **无卡模式 (no-GPU mode)** to save GPU-hours, then
+switch to GPU mode for rollouts. Useful flags: `--stage core` (off-GPU only), `--budget-only`,
+`--no-accel`, `--no-hf-mirror`, `--skip-libero-plus`, `--data-dir PATH`.
+
 ## 7. Phase-by-phase execution guide
 
 Always **smoke-test per-episode wall-clock first** (`./run.sh smoke …`) and re-check the budget
@@ -338,7 +361,7 @@ LoRA training + all rollout evals + the 3-seed comparison.
 | 6 | Demo videos (output #3) | 🟡 seam |
 | 7 | Report + repo polish | 🟡 README + report skeletons |
 | 8 | STRETCH: cross-family · π0.5 · feature-mod D · OpenVLA-OFT | ⬜ |
-| — | **Tooling** | ✅ `run.sh` one-click · budget gate · smoke harness |
+| — | **Tooling** | ✅ `run.sh` + `deploy.py` (AutoDL) one-click · budget gate · smoke harness |
 
 ## Repository layout
 

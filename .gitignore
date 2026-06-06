@@ -27,6 +27,9 @@ data/libero_plus/
 data/raw/
 third_party/
 
+# deploy.py local cache dir (off-AutoDL default; on AutoDL caches live under /root/autodl-tmp)
+.vcr-cache/
+
 # Rollout videos — only a HANDFUL of curated demo clips are kept (see analysis/demos/)
 *.mp4
 *.gif
