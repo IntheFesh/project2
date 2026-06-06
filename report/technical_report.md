@@ -52,6 +52,15 @@ labeled as such in every table.
 
 Where C still fails; qualitative rollout notes; any family with no recovery.
 
+## 6.1 Mechanistic probe — language conditioning (Phase 6) — `TBD`
+
+Evidence about *why* collapse happens. The same task IDs are run under correct / blank / shuffled /
+mismatched instructions; we report **paired** ΔSR (`language_sensitivity`, matched per task ID;
+stats via `eval/paired.py`). ΔSR ≈ 0 indicates the policy ignores language (effectively a
+vision-action model), consistent with the LIBERO-Plus / LIBERO-PRO observation. An optional
+vision-feature-shift probe (cosine distance of encoder features, clean vs perturbed) is scaffolded
+but low-priority. Budget impact is counted as `extra_units` in the estimator.
+
 ## 7. Prior art & positioning
 
 Cites arXiv 2510.00037 (RobustVLA *method*, closest prior work — distinct from this *study*),

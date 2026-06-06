@@ -48,6 +48,8 @@ class RolloutMatrix:
         seeds_per_condition: ``{condition: seed_count}``, e.g. ``{"A": 1, "B": 3, "C": 3}``
             (A = collapse curve, 1 seed; B/C = comparison, 3 LoRA-training seeds each).
         clean_instances: clean/original LIBERO task instances evaluated per seed (0 = skip clean).
+        extra_units: flat additional eval units not tied to the per-seed matrix -- e.g. the
+            language-conditioning probe's extra instruction passes over the base model (Workstream 6).
     """
 
     instances_per_cell: int
@@ -55,9 +57,11 @@ class RolloutMatrix:
     n_levels: int
     seeds_per_condition: Mapping[str, int]
     clean_instances: int = 0
+    extra_units: int = 0
 
     def __post_init__(self) -> None:
-        for name in ("instances_per_cell", "n_families", "n_levels", "clean_instances"):
+        for name in ("instances_per_cell", "n_families", "n_levels", "clean_instances",
+                     "extra_units"):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be >= 0")
         if not self.seeds_per_condition:
@@ -77,7 +81,7 @@ class RolloutMatrix:
         return self.clean_instances + self.n_cells() * self.instances_per_cell
 
     def total_units(self) -> int:
-        return self.units_per_seed() * self.total_seeds()
+        return self.units_per_seed() * self.total_seeds() + self.extra_units
 
 
 def project_budget(

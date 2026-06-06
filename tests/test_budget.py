@@ -80,8 +80,18 @@ def test_summarize_episode_times() -> None:
         summarize_episode_times([])
 
 
+def test_extra_units_added_for_probe() -> None:
+    m = RolloutMatrix(
+        instances_per_cell=20, n_families=4, n_levels=2,
+        seeds_per_condition={"A": 1, "B": 3, "C": 3}, clean_instances=20, extra_units=80,
+    )
+    assert m.total_units() == 180 * 7 + 80  # per-seed matrix + flat probe units
+
+
 def test_matrix_validation() -> None:
     with pytest.raises(ValueError):
         RolloutMatrix(1, 1, 1, seeds_per_condition={})
     with pytest.raises(ValueError):
         RolloutMatrix(-1, 1, 1, seeds_per_condition={"A": 1})
+    with pytest.raises(ValueError):
+        RolloutMatrix(1, 1, 1, seeds_per_condition={"A": 1}, extra_units=-5)

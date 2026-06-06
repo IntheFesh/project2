@@ -13,6 +13,7 @@ MODULES = [
     "eval.paired",
     "eval.holm",
     "eval.budget",
+    "eval.probe",
     "eval.run_rollout",
     "eval.record_demo",
     "perturb.libero_plus_wrapper",

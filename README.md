@@ -88,6 +88,21 @@ result**: it tests whether Condition C genuinely generalizes or merely overfits 
 family (the "did you just train on the test perturbation?" red flag). Families are tagged in-dist
 vs held-out by `classify_distribution`; see `generalization_gap` in [`eval/metrics.py`](eval/metrics.py).
 
+## Language-conditioning probe — *why* collapse happens *(mechanism, Phase 6)*  ·  `TBD`
+
+A cheap, high-signal probe of the collapse *mechanism*: run the **same task IDs** under
+correct / blank / shuffled / mismatched instructions and measure **paired** ΔSR
+(`language_sensitivity` in [`eval/probe.py`](eval/probe.py), matched per task ID). ΔSR ≈ 0 ⇒ the
+policy effectively ignores language (a vision-action model), echoing the LIBERO-Plus / LIBERO-PRO
+finding that VLAs largely ignore instructions.
+
+| Instruction | SR | paired ΔSR vs correct | 95% CI | McNemar *p* |
+|---|:--:|:--:|:--:|:--:|
+| correct | `TBD` | — | — | — |
+| blank | `TBD` | `TBD` | `TBD` | `TBD` |
+| shuffled | `TBD` | `TBD` | `TBD` | `TBD` |
+| mismatched | `TBD` | `TBD` | `TBD` | `TBD` |
+
 ---
 
 # 📚 Tutorial

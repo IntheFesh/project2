@@ -79,9 +79,15 @@ def build_matrix(args: argparse.Namespace) -> tuple[RolloutMatrix, int]:
         seeds["D"] = seeds_cmp
     default_train_runs = (3 if args.include_d else 2) * seeds_cmp  # B,C[,D] x seeds
 
+    # Language-conditioning probe adds extra instruction passes on the base model (Workstream 6).
+    probe = eval_cfg.get("language_probe") or {}
+    extra_units = int(probe.get("instances", 0)) * int(probe.get("variants", 0)) \
+        if probe.get("enabled") else 0
+
     matrix = RolloutMatrix(
         instances_per_cell=instances, n_families=max(1, n_families),
         n_levels=max(1, n_levels), seeds_per_condition=seeds, clean_instances=clean,
+        extra_units=extra_units,
     )
     return matrix, default_train_runs
 
@@ -98,7 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"matrix: instances/cell={matrix.instances_per_cell} clean={matrix.clean_instances} "
           f"families={matrix.n_families} levels={matrix.n_levels} cells={matrix.n_cells()} "
-          f"seeds={dict(matrix.seeds_per_condition)} train_runs={n_train_runs}")
+          f"seeds={dict(matrix.seeds_per_condition)} probe_units={matrix.extra_units} "
+          f"train_runs={n_train_runs}")
     print(format_report(proj))
 
     if not proj["fits"]:

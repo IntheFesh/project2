@@ -25,3 +25,10 @@ paired_by: task_id
 max_steps_per_episode: 600      # TODO(verify per LIBERO task horizon)
 workers: 1                      # single GPU; reserved for a possible 2nd card
 device: cuda
+
+# Mechanistic probe: language-conditioning ablation (eval/probe.py). Extra instruction passes
+# over the base model on a probe task set -> counted as extra_units in the budget estimate.
+language_probe:
+  enabled: true
+  instances: 20                 # probe task IDs
+  variants: 4                   # correct + blank + shuffled + mismatched
