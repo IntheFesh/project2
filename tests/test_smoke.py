@@ -16,6 +16,7 @@ MODULES = [
     "eval.run_rollout",
     "eval.record_demo",
     "perturb.libero_plus_wrapper",
+    "perturb.libero_plus_constants",
     "data.augment.visual_aug",
     "data.prepare_libero_subset",
     "train.train_lora",
