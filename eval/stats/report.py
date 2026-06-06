@@ -23,6 +23,7 @@ from eval.bootstrap import bootstrap_ci
 from eval.holm import holm_bonferroni
 from eval.metrics import generalization_gap, recovery, success_rate
 from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.probe import ABLATED_VARIANTS, language_sensitivity_paired
 
 CLEAN_FAMILY = "clean"
 _NON_PERTURBED = {CLEAN_FAMILY, "unknown"}
@@ -37,8 +38,15 @@ def read_rows(path: str | Path) -> list[dict]:
             rows.append({
                 "condition": r["condition"], "task_id": r["task_id"], "family": r["family"],
                 "level": int(r["level"]), "seed": int(r["seed"]), "success": int(r["success"]),
+                # Optional probe column: present only in language-probe CSVs (None otherwise).
+                "instruction": r.get("instruction"),
             })
     return rows
+
+
+def has_instructions(rows: Sequence[Mapping]) -> bool:
+    """True if any row carries a (non-empty) ``instruction`` -- i.e. it is a language-probe CSV."""
+    return any(r.get("instruction") for r in rows)
 
 
 def perturbed_families(rows: Sequence[Mapping]) -> list[str]:
@@ -83,6 +91,40 @@ def matched_pairs(
     a_idx, b_idx = index(cond_a), index(cond_b)
     keys = sorted(set(a_idx) & set(b_idx))
     return [a_idx[k] for k in keys], [b_idx[k] for k in keys]
+
+
+def _instr_index(rows: Sequence[Mapping], condition: str, instruction: str) -> dict:
+    return {
+        (r["task_id"], r["level"], r["seed"]): int(r["success"])
+        for r in rows if r["condition"] == condition and r.get("instruction") == instruction
+    }
+
+
+def language_probe_report(rows: Sequence[Mapping], *, n_resamples: int, seed: int) -> dict:
+    """Per-condition language sensitivity: paired ΔSR (correct vs each ablated instruction).
+
+    Matched within a condition on ``(task_id, level, seed)``; only conditions carrying a ``correct``
+    instruction and at least one ablated variant are included. Returns
+    ``{condition: {variant: language_sensitivity_paired(...)}}``.
+    """
+    out: dict[str, dict] = {}
+    for cond in sorted({r["condition"] for r in rows if r.get("instruction")}):
+        correct = _instr_index(rows, cond, "correct")
+        if not correct:
+            continue
+        variants: dict[str, dict] = {}
+        for variant in ABLATED_VARIANTS:
+            ablated = _instr_index(rows, cond, variant)
+            keys = sorted(set(correct) & set(ablated))
+            if not keys:
+                continue
+            variants[variant] = language_sensitivity_paired(
+                [correct[k] for k in keys], [ablated[k] for k in keys],
+                n_resamples=n_resamples, seed=seed,
+            )
+        if variants:
+            out[cond] = variants
+    return out
 
 
 def _iqm(values: Sequence[float]) -> float:
@@ -189,7 +231,7 @@ def build_report(
         cond: aggregate_summary(rows, cond, n_resamples=n_resamples, seed=seed)
         for cond in conditions
     }
-    return {
+    report = {
         "conditions": conditions,
         "families": families,
         "trained_families": trained,
@@ -205,6 +247,10 @@ def build_report(
         "aggregate": aggregate,
         "clean_sr_base": sr_base_clean,
     }
+    # Probe 2 (language conditioning): only when the CSV carries an `instruction` column.
+    if has_instructions(rows):
+        report["language_probe"] = language_probe_report(rows, n_resamples=n_resamples, seed=seed)
+    return report
 
 
 def _fmt(x: float) -> str:
@@ -242,4 +288,14 @@ def format_text(report: Mapping) -> str:
             f"  {cond}: SR={_fmt(a['sr'])} [{_fmt(a['ci_lo'])}, {_fmt(a['ci_hi'])}] "
             f"IQM={_fmt(a['iqm_cell_sr'])} (n={a['n']}, cells={a['n_cells']})"
         )
+    if report.get("language_probe"):
+        lines.append("")
+        lines.append("Language-conditioning probe (paired ΔSR = SR_correct − SR_ablated):")
+        for cond, variants in report["language_probe"].items():
+            for variant, r in variants.items():
+                lines.append(
+                    f"  {cond} correct→{variant:<10} ΔSR={_fmt(r['delta'])} "
+                    f"[{_fmt(r['ci_lo'])}, {_fmt(r['ci_hi'])}] McNemar p={_fmt(r['pvalue'])} "
+                    f"(n={r['n']})"
+                )
     return "\n".join(lines)

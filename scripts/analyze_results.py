@@ -3,8 +3,10 @@
 Consumes the canonical schema ``condition, task_id, family, level, seed, success`` produced by
 ``eval/run_rollout.py`` and emits the report defined in ``docs/EVALUATION.md``: per-family SR with
 bootstrap 95% CI, the headline paired ``Δ_method (C−B)`` with paired-bootstrap CI + McNemar (matched
-by task), Holm–Bonferroni across families, Recovery, the in-dist/held-out generalization gap, and an
-rliable-style aggregate. Fully off-GPU.
+by task), Holm–Bonferroni across families, Recovery, the **held-out generalization gap** (Probe 1),
+and an rliable-style aggregate. If the CSV also carries an optional ``instruction`` column, the
+**language-conditioning probe** (Probe 2; paired ΔSR per ablated variant) is added automatically.
+The two probes are the headline (see ``docs/PROBES.md``); the statistics are supporting infra. Fully off-GPU.
 
     uv run python -m scripts.analyze_results --csv analysis/runs/all.csv --out analysis/report
 """
