@@ -14,6 +14,8 @@ MODULES = [
     "eval.holm",
     "eval.budget",
     "eval.probe",
+    "eval.stats",
+    "eval.stats.report",
     "eval.run_rollout",
     "eval.record_demo",
     "perturb.libero_plus_wrapper",
@@ -24,6 +26,7 @@ MODULES = [
     "train.feature_mod",
     "scripts.estimate_budget",
     "scripts.smoke_timing",
+    "scripts.analyze_results",
 ]
 
 
