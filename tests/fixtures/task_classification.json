@@ -1,0 +1,13 @@
+{
+  "libero_spatial": [
+    {"id": 0, "name": "task_a_camera_l1", "category": "Camera Viewpoints", "difficulty_level": 1},
+    {"id": 1, "name": "task_b_camera_l1", "category": "Camera Viewpoints", "difficulty_level": 1},
+    {"id": 2, "name": "task_c_camera_l3", "category": "Camera Viewpoints", "difficulty_level": 3},
+    {"id": 3, "name": "task_d_background_l1", "category": "Background Textures", "difficulty_level": 1},
+    {"id": 4, "name": "task_e_noise_l5", "category": "Sensor Noise", "difficulty_level": 5}
+  ],
+  "libero_object": [
+    {"id": 0, "name": "task_f_camera_l1", "category": "Camera Viewpoints", "difficulty_level": 1},
+    {"id": 1, "name": "task_g_robot_l2", "category": "Robot Initial States", "difficulty_level": 2}
+  ]
+}

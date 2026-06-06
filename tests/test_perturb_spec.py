@@ -48,3 +48,8 @@ def test_parse_non_integer_level_rejected() -> None:
 
 def test_core_families_are_expected() -> None:
     assert set(CORE_FAMILIES) == {"viewpoint", "lighting", "texture", "noise"}
+
+
+def test_perturbspec_is_a_selector_key_with_category() -> None:
+    # PerturbSpec is now a SELECTOR KEY: (family, level) -> LIBERO-Plus category for task lookup.
+    assert PerturbSpec("texture", 3).category == "Background Textures"  # verified mapping
