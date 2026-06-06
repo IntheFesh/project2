@@ -163,27 +163,31 @@ vla-collapse-recover/
 ├── requirements-gpu.txt        ✅ pinned cu128 torch/torchvision (rental)
 ├── configs/                    ✅ config-driven (YAML): model/ lora/ perturb/ eval/
 ├── perturb/
-│   └── libero_plus_wrapper.py  ✅ PerturbSpec selector + in-dist/held-out tagger
-│                               🟡 make_perturbed_env (Phase 2 seam: LIBERO-Plus env)
+│   ├── libero_plus_constants.py ✅ single source of truth: family↔category, levels, JSON path
+│   └── libero_plus_wrapper.py  ✅ task-selection (parse/group/select) + in-dist/held-out tagger
+│                               🟡 make_perturbed_env(task_id) (Phase 2 env seam)
 ├── data/
-│   ├── prepare_libero_subset.py ✅ select_subset / write_task_subset  🟡 task enumeration (P1–2)
+│   ├── prepare_libero_subset.py ✅ parse task_classification.json + select  🟡 locate-JSON seam
 │   └── augment/visual_aug.py    ✅ aligned_magnitude  🟡 torchvision transforms (Phase 3)
 ├── train/
 │   ├── train_lora.py           🟡 LoRA fine-tune (Phase 3 seam)
 │   └── feature_mod.py          🟡 feature-mod adapter (Phase 8 / STRETCH seam)
 ├── eval/
-│   ├── metrics.py              ✅ SR, Δ_robust, Recovery, Δ_method
-│   ├── bootstrap.py paired.py holm.py  ✅ stats (the differentiator)
-│   ├── budget.py               ✅ GPU-day budget estimator
-│   ├── run_rollout.py          🟡 rollout eval (Phase 1 seam)
+│   ├── metrics.py              ✅ SR, Δ_robust, Recovery, Δ_method, generalization_gap
+│   ├── bootstrap.py paired.py holm.py  ✅ stats primitives
+│   ├── stats/                  ✅ public paired-stats facade + report builder (the harness)
+│   ├── budget.py               ✅ GPU-day budget estimator (task-instance units)
+│   ├── probe.py                ✅ language-conditioning probe (rollout = seam)
+│   ├── run_rollout.py          ✅ plan/row/CSV pure · 🟡 policy+sim seam (1 trial/task)
 │   └── record_demo.py          🟡 demo recorder (Phase 6 seam)
 ├── scripts/
 │   ├── verify_env.py           ✅ asserts sm_120 / cu128 / torch≥2.7 / LeRobot
-│   ├── estimate_budget.py      ✅ budget gate CLI (exits non-zero if over the cap)
-│   └── smoke_timing.py         ✅ time a rollout → project the budget (live part = P1 seam)
+│   ├── estimate_budget.py · smoke_timing.py  ✅ budget gate + smoke timing
+│   └── analyze_results.py      ✅ rollout CSV → full paired-stats report (text + JSON)
+├── docs/                       LIBERO_PLUS_NOTES.md · EVALUATION.md
 ├── analysis/                   eval summaries (CSV/JSON) + demos/ (a few clips)
-├── report/                     technical_report.md · one_pager.md
-└── tests/                      ✅ off-GPU smoke tests (run with `./run.sh test`)
+├── report/                     technical_report.md · one_pager.md · results_card.md
+└── tests/                      ✅ off-GPU tests + fixtures/ (run with `./run.sh test`)
 ```
 
 ## 4. Experimental design (the concepts you need)
