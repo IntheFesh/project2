@@ -1,6 +1,6 @@
 """Bootstrap confidence intervals for success rates.
 
-Phase 5 (the differentiator). Off-GPU; numpy only. Percentile bootstrap 95% CIs over
+Phase 5 (supporting statistics infra). Off-GPU; numpy only. Percentile bootstrap 95% CIs over
 per-episode success outcomes (>= 10,000 resamples for the final tables).
 """
 

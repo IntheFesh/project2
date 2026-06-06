@@ -252,7 +252,8 @@ Everything here needs only `uv sync` (no GPU, no big downloads).
 ./run.sh test          # ruff check . && pytest -q   (currently: all green)
 ```
 
-**(b) The statistics API** — fully implemented; this is the project's differentiator. Example:
+**(b) The statistics API** — fully implemented (supporting infrastructure, shared with PolicyArena;
+*not* the headline — see [`docs/PROBES.md`](docs/PROBES.md)). Example:
 ```python
 from eval.metrics import success_rate, delta_method
 from eval.paired import mcnemar, paired_bootstrap_delta
@@ -427,7 +428,7 @@ LoRA training + all rollout evals + the 3-seed comparison.
 | 2 | Perturbation suite + collapse curve (output #1) | 🟡 selector done; env seam |
 | 3 | Augmentation + LoRA training | 🟡 aug magnitudes done; train seam |
 | 4 | Recovery curve + intervention comparison (**headline**, output #2) | ⬜ needs 1–3 |
-| **5** | Statistics: bootstrap / paired / Holm (**differentiator**) | ✅ implemented & tested; ⬜ awaiting data |
+| **5** | Statistics: bootstrap / paired / Holm (supporting infra) | ✅ implemented & tested; ⬜ awaiting data |
 | 6 | Demo videos (output #3) | 🟡 seam |
 | 7 | Report + repo polish | 🟡 README + report skeletons |
 | 8 | STRETCH: cross-family · π0.5 · feature-mod D · OpenVLA-OFT | ⬜ |

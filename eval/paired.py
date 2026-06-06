@@ -1,6 +1,6 @@
-"""Paired comparison at fixed init states.
+"""Paired comparison at fixed task IDs.
 
-Phase 5 (the differentiator). Conditions are evaluated on *identical* init states, so each
+Phase 5 (supporting statistics infra). Conditions are evaluated on the *same* task IDs, so each
 episode is matched across conditions. The paired analysis is what makes the small (~5-10pp)
 B-vs-C method gap statistically detectable. Off-GPU; numpy/scipy.
 """
