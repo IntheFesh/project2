@@ -30,10 +30,17 @@ averaged over the in-distribution augmented families; paired at fixed init state
 
 Base-model SR vs perturbation level per family; Δ_robust @ L4. Plot: `TBD`.
 
-## 4. Recovery (Phase 4) — `TBD`
+## 4. Recovery & cross-family generalization (Phase 4) — `TBD`
 
-Per-family SR for A/B/C with **explicit in-dist vs held-out tags**. In-dist recovery is **not**
-generalization. Held-out (cross-family, STRETCH) results, if run, are labeled as such.
+Per-family SR for A/B/C with **explicit in-dist vs held-out tags** (via `classify_distribution`).
+In-dist recovery is **not** generalization.
+
+**First-class held-out test.** Condition C is evaluated on at least one family **never seen during
+augmentation** (`held_out_families`, e.g. `layout`), and we report the **generalization gap** =
+Recovery_C(in-dist) − Recovery_C(held-out) (`generalization_gap` in `eval/metrics.py`). A large
+positive gap means C overfits its augmentation family; ``~0`` means it genuinely generalizes. This
+directly addresses the "did you just train on the test perturbation?" red flag. Held-out rows are
+labeled as such in every table.
 
 ## 5. Statistics (Phase 5)
 

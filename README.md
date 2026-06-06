@@ -81,7 +81,12 @@ Perturbed success rate is averaged over the **in-distribution** augmented famili
 | lighting  | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
 | texture   | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
 | noise     | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| *(held-out family, STRETCH cross-family test)* | held-out | `TBD` | `TBD` | `TBD` | `TBD` |
+| **layout (held-out)** | **held-out** | `TBD` | `TBD` | `TBD` | `TBD` |
+
+**Generalization gap** (Recovery_C on in-dist − Recovery_C on held-out): `TBD`. A **first-class
+result**: it tests whether Condition C genuinely generalizes or merely overfits its augmentation
+family (the "did you just train on the test perturbation?" red flag). Families are tagged in-dist
+vs held-out by `classify_distribution`; see `generalization_gap` in [`eval/metrics.py`](eval/metrics.py).
 
 ---
 
