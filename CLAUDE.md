@@ -3,10 +3,12 @@
 Project memory for Claude Code. Read this every session.
 
 ## What this is
-A **reproducible empirical study** of visual-perturbation robustness in open VLA models:
-reproduce the **collapse**, **recover** via perturbation-augmented LoRA, **compare** training
-interventions with rigorous paired statistics, and ship **demo videos**. Portfolio /
-research-engineering project (PhD-application signal), **not a paper**.
+A **reproducible empirical study** of visual-perturbation robustness in open VLA models, with **two
+contributions**: (1) honest measurement of **collapse → recovery** (perturbation-targeted LoRA),
+compared with **paired statistics** + a first-class **held-out generalization** test + a
+**language-conditioning probe**; (2) a **reusable paired-statistics evaluation harness/protocol**
+(`eval/stats/`, `docs/EVALUATION.md`) — the VLA analogue of rliable. Portfolio /
+research-engineering project (PhD-application signal), **not a paper**. Question-first, not tool-first.
 
 ## Hard budget (non-negotiable)
 - **single** RTX 5090 (32 GB, Blackwell `sm_120`), **serial** rollouts.
@@ -26,7 +28,11 @@ research-engineering project (PhD-application signal), **not a paper**.
    clips; subset LIBERO + subset LIBERO-Plus; clean intermediates.
 8. **Single serial card:** smoke-test timing first; size task subset & episode count to fit < 5 days.
    3 seeds on the key B/C(/D) comparison; collapse curve (A) needs only 1 seed.
-9. **Do NOT reimplement perturbations.** Use LIBERO-Plus drop-in (`pip install -e .`); thin wrapper only.
+9. **Do NOT reimplement perturbations.** LIBERO-Plus ships PRE-BUILT (task×category×difficulty)
+   instances; SELECT task IDs from `task_classification.json` by (family, level) and run each once
+   (`num_trials_per_task=1`) — do NOT sample init states. Verify category strings / level scheme /
+   env API against the installed package (`docs/LIBERO_PLUS_NOTES.md`); never hardcode unverified
+   specifics — route them through `perturb/libero_plus_constants.py`.
 10. Type hints + docstrings + smoke tests; config-driven (YAML in `configs/`); small reviewable commits.
 11. **Ask before** large downloads, long (>2h) runs, or opening the GPU rental.
 
@@ -36,12 +42,20 @@ research-engineering project (PhD-application signal), **not a paper**.
 - Benchmark: **LIBERO**. Perturbations PRIMARY: **LIBERO-Plus** (2510.13626); STRESS: LIBERO-PRO (2510.03827).
 - FT: LoRA/PEFT. Aug: torchvision + perturbation-aligned generators. Stats: numpy/scipy + bootstrap/paired/Holm.
 
-## Conditions
-A = base (no FT) · B = LoRA + standard aug · C = LoRA + perturbation-targeted aug · D = feature-mod adapter (STRETCH).
+## Conditions & first-class experiments
+A = base (no FT) · B = LoRA + standard aug · C = LoRA + perturbation-targeted aug · D = feature-mod (STRETCH).
+First-class: **held-out cross-family generalization** (`generalization_gap`) and the
+**language-conditioning probe** (`eval/probe.py`). **Headline = the paired-statistics eval HARNESS**
+(`eval/stats/`, `scripts/analyze_results.py`), not the recovery size. Pairing is by **task_id**
+(matched (task_id,level,seed)); a B/C "seed" = an independent LoRA training run on the same task set.
+Condition-C torchvision aug is a weak 2-D proxy for 3-D viewpoint (alt stub: `configs/lora/condition_c_realdata.yaml`).
 
-## Two-stage env
-- `uv sync` → lightweight core + dev (off-GPU work: stats, analysis, smoke tests).
-- `uv sync --extra gpu` → cu128 torch stack (rental only). Then `pip install` LeRobot + LIBERO-Plus from source.
+## Two-stage env & deploy
+- `uv sync` → lightweight core + dev (off-GPU: stats, analysis, smoke tests). `./run.sh` one-click.
+- GPU/rental: `python deploy.py` (AutoDL-aware: reuses preinstalled cu128 torch, routes caches to
+  `/root/autodl-tmp`, academic accel + hf-mirror) installs torch + LeRobot + **LIBERO-Plus full**:
+  apt (incl. `libmagickwand-dev`) + `extra_requirements.txt` + `assets.zip` → `libero/libero/assets/`.
+  Run setup/downloads in **无卡模式** to keep multi-GB pulls off the GPU clock. Flags `--skip-apt/--skip-assets`.
 - `python scripts/verify_env.py` → asserts `sm_120 (12,0)`, torch ≥ 2.7, LeRobot import. Cannot pass off-GPU.
 
 ## Per-turn output contract

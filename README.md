@@ -1,15 +1,22 @@
 # VLA-Collapse-Recover
 
-**A reproducible empirical study of visual-perturbation robustness in open Vision-Language-Action (VLA) models.**
+**Do open VLAs that ace clean LIBERO actually perceive the scene — or exploit shortcuts that break
+under a moved camera or changed lighting? And which training intervention most repairs that
+brittleness — *provably*?**
 
-Open VLAs score high on *clean* LIBERO but **collapse** under visual / viewpoint perturbations
-(documented across multiple independent 2025–2026 papers). This repo (A) reproduces that collapse,
-(B) **recovers** it via perturbation-augmented LoRA fine-tuning, (C) compares training interventions
-with **rigorous paired statistics**, and (D) produces before/after rollout demo videos.
+VLA-Collapse-Recover answers this with **two contributions**:
 
-> **The headline is the *intervention comparison* (A/B/C), not the recovery magnitude.** Same-family
-> recovery is expected; the contribution is a clean, reproducible study with honest statistics.
-> This is a **research-engineering portfolio project**, not a paper. No novelty is claimed.
+1. **An honest, reproducible measurement** of visual-perturbation *collapse* and its *recovery* from
+   perturbation-targeted LoRA — comparing training interventions (A/B/C) with **paired statistics**,
+   a first-class **held-out generalization** test, and a **language-conditioning probe** of the
+   collapse mechanism.
+2. **A reusable paired-statistics evaluation harness/protocol** for VLA robustness
+   ([`eval/stats/`](eval/stats/) · [`docs/EVALUATION.md`](docs/EVALUATION.md)) — bootstrap CIs,
+   paired tests matched by task, Holm–Bonferroni, and rliable-style aggregates.
+
+> **Headline = the intervention comparison led by paired statistics**, not the recovery magnitude
+> (same-family recovery is expected by design). A research-engineering portfolio project, **not a
+> paper**; no novelty claimed — see [prior art](#prior-art-cited-no-novelty-claimed).
 
 ```bash
 git clone <this-repo> && cd vla-collapse-recover
@@ -189,6 +196,11 @@ vla-collapse-recover/
 | **B** | LoRA + standard aug | LoRA fine-tune with *generic* torchvision augmentation |
 | **C** | LoRA + targeted aug | LoRA fine-tune with augmentation whose **family & magnitude mirror the eval perturbations** |
 | **D** | feature-mod (STRETCH) | a small FTM/FLA-style feature-modulation adapter instead of LoRA |
+
+> **Caveat (Condition C).** torchvision augmentation is a *weak 2-D proxy* for LIBERO-Plus's true
+> **3-D `viewpoint`** perturbation — a single frame cannot reproduce a moved camera. It remains the
+> default; the honest alternative (fine-tuning C on LIBERO-Plus's released perturbation training
+> data) is documented in the report's limitations and stubbed in `configs/lora/`.
 
 **In-distribution vs held-out.** Training augmentation and evaluation perturbation share a *family*
 (e.g. both use "lighting") but live on *separate data splits*. A family used in augmentation is
@@ -417,6 +429,26 @@ See the annotated [Repository map](#3-repository-map-what-each-piece-does) above
 - **arXiv 2510.03827 — LIBERO-PRO**: memorization-exposing benchmark (≈0% floor); stress/citation only.
 - **arXiv 2512.02902 — FTM/FLA-style feature modulation**: basis for STRETCH condition D.
 - **arXiv 2510.17640 — RESample-style augmentation**: basis for perturbation-aligned augmentation.
+- **SmolVLA — arXiv 2506.01844**: the ~450M base model (LeRobot); chosen so the whole study fits a
+  single RTX 5090 in < 5 days — the tight scope is a deliberate *scoping-discipline* feature.
+
+**Positioning lineage (evaluation methodology).** The eval harness is the VLA-manipulation analogue
+of statistically-honest RL/robot evaluation:
+
+- **rliable / "Statistical Precipice" — arXiv 2108.13264** (Agarwal et al., NeurIPS 2021): report
+  effect sizes with uncertainty (CIs, IQM), not bare point scores — the methodological north star.
+- **SimplerEnv — arXiv 2405.05941**: simulation-based, reproducible policy evaluation.
+- **AutoEval — arXiv 2503.24278** (Zhou et al., CoRL 2025): scalable, reproducible real-world policy
+  evaluation. This project is a *perturbation-robustness* analogue with paired statistics.
+
+**Why robustness is the right lens (world models).** Perturbation robustness is a proxy for whether
+a policy's implicit representation is **causal** (it models the scene) or **shortcut-based** (it
+latches onto spurious correlations a moved camera or new texture destroys). Collapse under visual
+perturbation is evidence of shortcut learning; recovery that **generalizes to held-out families** is
+weak evidence of a more reliable, world-model-like representation. We *measure* this, honestly,
+rather than claim it.
+
+Train-time augmentation and eval-time perturbation share a *family* but stay on *separate splits*.
 
 ## License
 

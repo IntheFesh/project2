@@ -1,0 +1,17 @@
+# OPTIONAL ALTERNATIVE for Condition C -- NOT the default, NOT implemented yet.
+#
+# Default Condition C uses torchvision augmentation aligned to the eval families
+# (configs/lora/smolvla_r16.yaml + data/augment/visual_aug.py). That augmentation is a WEAK 2-D
+# PROXY for LIBERO-Plus's true 3-D camera-viewpoint perturbation (a single 2-D frame cannot
+# reproduce a moved camera). This stub documents the honest alternative: fine-tune Condition C on
+# LIBERO-Plus's RELEASED perturbation training data (RLDS / LeRobot) instead of synthetic aug.
+#
+# See report/technical_report.md section 8 (Condition-C design fork). Leave disabled until/unless
+# the real perturbation training data is wired in.
+enabled: false
+source: libero_plus_perturbation_trajectories   # TODO(verify): exact RLDS/LeRobot dataset id/name
+data_format: lerobot                            # TODO(verify): RLDS vs LeRobot conversion
+note: >
+  Train on real perturbed trajectories so Condition C sees genuine 3-D viewpoint / lighting /
+  texture / noise variation, not a 2-D approximation. Compare head-to-head with the torchvision
+  default; report both, clearly labeled.
