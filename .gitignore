@@ -45,3 +45,13 @@ analysis/runs/**/episodes/
 *.swp
 .idea/
 .vscode/
+
+# --- vcr: data & artifacts (never commit) ---
+hf/
+third_party/LIBERO-orig/
+third_party/LIBERO-plus/
+*.mp4
+*.log
+deploy.log
+/tmp/
+videos/
