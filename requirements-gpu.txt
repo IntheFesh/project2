@@ -5,8 +5,13 @@
 # or with plain pip:
 #   pip install -r requirements-gpu.txt
 #
-# CUDA 12.8 (cu128) is the minimum for sm_120; torch>=2.7 is the first stable with native
-# sm_120 / cu128 wheels. Do NOT use CUDA 13.x. The index-url below pins these to cu128.
+# CUDA 12.8 (cu128) is the minimum for sm_120; torch 2.8.0 is the pinned build with
+# native sm_120 / cu128 wheels. Do NOT use CUDA 13.x. The index-url below resolves
+# these to their +cu128 builds (i.e. torch==2.8.0+cu128).
 --index-url https://download.pytorch.org/whl/cu128
-torch>=2.7.0
-torchvision>=0.22.0
+torch==2.8.0
+torchvision==0.23.0
+
+# NOTE: LeRobot is installed separately from source (not from this cu128 index):
+#   uv pip install "lerobot[dataset,peft] @ git+https://github.com/huggingface/lerobot@v0.5.2"
+# See pyproject.toml [project.optional-dependencies].gpu and docs/REPRODUCING.md.

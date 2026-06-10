@@ -1,14 +1,16 @@
 [project]
 name = "vla-collapse-recover"
-version = "0.0.1"
-description = "VLA-Collapse-Recover: a reproducible empirical study of visual-perturbation robustness in open Vision-Language-Action models (collapse -> recovery via perturbation-augmented LoRA)."
+version = "0.1.0"
+description = "VLA-Collapse-Recover (vcr): a reproducible diagnostic of visual-perturbation robustness in open Vision-Language-Action models -- collapse under LIBERO-Plus perturbations, recovery via LoRA, read through held-out generalization + paired statistics."
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12"
 license = { text = "MIT" }
+keywords = ["vision-language-action", "robustness", "LIBERO", "LoRA", "reproducibility"]
 
-# --- Lightweight CORE deps ---------------------------------------------------
-# Installable OFF-GPU (no rental). Enough for: scaffolding, augmentation-magnitude
-# bookkeeping, the statistics modules, analysis/plots, and the full off-GPU smoke tests.
+# --- Off-GPU CORE dependencies -----------------------------------------------
+# Installable anywhere (no rental). Enough for: the statistics modules, analysis/
+# plots (heatmap), augmentation-magnitude bookkeeping, budget gating, and the full
+# off-GPU test suite (`make setup && pytest`). Python 3.12 is the supported target.
 dependencies = [
   "numpy>=1.26",
   "scipy>=1.11",
@@ -19,25 +21,27 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# --- GPU stack (PyPI-resolvable parts) ---------------------------------------
-# Install ONLY on the rented RTX 5090 (Blackwell, sm_120):   uv sync --extra gpu
-# torch / torchvision are NOT here: they need the cu128 index (not a normal PyPI source),
-# so they are pinned in `requirements-gpu.txt` and installed separately (see README):
-#   uv pip install --index-url https://download.pytorch.org/whl/cu128 -r requirements-gpu.txt
-# Requires CUDA 12.8 (cu128) + PyTorch >= 2.7 (first stable with native sm_120). No CUDA 13.x.
-# Prefer the official pytorch/pytorch:2.x-cuda12.8-cudnn9 image; avoid runtime JIT of custom
-# CUDA kernels (Blackwell PTX JIT has a known missing-lib issue) -- use AOT wheels.
+# --- GPU / runtime stack -----------------------------------------------------
+# Install ONLY on the rented RTX 5090 (Blackwell, sm_120):  `uv sync --extra gpu`
+# The PyPI-resolvable parts of the runtime training + rollout stack live here.
+#
+# Two runtime dependencies are installed OUT-OF-BAND (not lockable from PyPI), so
+# they are declared here as comments with their exact pins instead of breaking the
+# off-GPU lock:
+#   * lerobot[dataset,peft]==0.5.2  -- the core SmolVLA training + `lerobot-eval`
+#       driver. Not published on PyPI at this version; installed from source on the
+#       rental (deploy.py / REPRODUCING.md):
+#         uv pip install "lerobot[dataset,peft] @ git+https://github.com/huggingface/lerobot@v0.5.2"
+#   * torch==2.8.0+cu128 (+ matching torchvision) -- the cu128 build is not on the
+#       default PyPI index; installed from the PyTorch cu128 index. See
+#       requirements-gpu.txt. Requires CUDA 12.8 (first stable sm_120). No CUDA 13.x.
 gpu = [
+  "peft==0.19.1",
   "transformers>=4.44",
   "huggingface-hub>=0.24",
-  "peft>=0.11",
   "imageio>=2.34",
   "imageio-ffmpeg>=0.5",
 ]
-# NOTE: LeRobot (SmolVLA / pi0.5) and LIBERO-Plus are installed from source on the rental,
-# not from PyPI (fast-moving), so they are documented in the README instead of pinned here:
-#   pip install "lerobot[smolvla] @ git+https://github.com/huggingface/lerobot"
-#   pip install -e third_party/LIBERO-Plus   # drop-in replacement for `libero`
 
 [dependency-groups]
 # Installed by default with `uv sync` (off-GPU dev tooling).
@@ -46,10 +50,13 @@ dev = [
   "ruff>=0.6",
 ]
 
+[project.urls]
+Repository = "https://github.com/IntheFesh/project2"
+Documentation = "https://github.com/IntheFesh/project2/blob/main/docs/PROBES.md"
+
 [tool.uv]
 package = false          # script-based research repo; do not build/install the project itself
-# We only ever run on Linux (the rented RTX 5090 + CI/dev containers).
-environments = ["sys_platform == 'linux'"]
+environments = ["sys_platform == 'linux'"]   # only ever runs on Linux (rented 5090 + CI)
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -58,4 +65,13 @@ addopts = "-q"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+# eval/runners/{phase2_collapse,phase5_stats}.py are FROZEN at their
+# reproduced-run state: their statistical logic must not change (the regenerated
+# phase5_summary must stay byte-identical), so the few pre-existing style nits in
+# them are grandfathered here rather than edited. Correctness is guarded by the
+# `make stats` regression, not by these rules.
+"eval/runners/phase2_collapse.py" = ["F401"]
+"eval/runners/phase5_stats.py" = ["F841", "E702"]

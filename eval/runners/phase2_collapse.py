@@ -21,10 +21,10 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from eval.lerobot_runner import run_eval
+from eval.runners.lerobot_runner import run_eval
 from perturb.libero_plus_constants import FAMILY_TO_CATEGORY
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TASK_CLASS_JSON = REPO_ROOT / "third_party/LIBERO-plus/libero/libero/benchmark/task_classification.json"
 
 CORE_FAMILIES = ("viewpoint", "lighting", "texture", "noise")

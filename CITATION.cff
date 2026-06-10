@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it using the metadata below."
+title: "VLA-Collapse-Recover: A Reproducible Diagnostic of Visual-Representation Quality in Open Vision-Language-Action Models under Perturbation"
+abstract: >-
+  Open Vision-Language-Action models (SmolVLA) ace clean LIBERO but collapse under
+  LIBERO-Plus visual perturbations. VLA-Collapse-Recover is a single-GPU, delta-only
+  study that reproduces the collapse and asks a diagnostic question: does
+  perturbation-targeted LoRA fix the underlying task representation -- so robustness
+  generalizes to a held-out perturbation family -- or does it only patch symptoms on
+  the trained families? Using per-episode paired statistics (bootstrap CIs, McNemar,
+  Holm-Bonferroni) over a three-condition design (A=base, B=LoRA+standard aug,
+  C=LoRA+targeted aug), it finds that LoRA's gains transfer to the never-augmented
+  held-out family while family-matched augmentation gives no systematic advantage. The
+  contribution is the diagnostic and its honest negative findings, not a new method.
+type: software
+version: "0.1.0"
+date-released: "2026-06-10"
+license: MIT
+repository-code: "https://github.com/IntheFesh/project2"
+keywords:
+  - vision-language-action
+  - VLA robustness
+  - LIBERO
+  - LIBERO-Plus
+  - LoRA
+  - representation quality
+  - paired statistics
+  - reproducibility
+authors:
+  # TODO(author): fill in before publishing/citing. Placeholders, not fabricated.
+  - family-names: "<TODO: family name>"
+    given-names: "<TODO: given name>"
+    # orcid: "https://orcid.org/<TODO: ORCID iD>"
+    # affiliation: "<TODO: affiliation>"

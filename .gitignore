@@ -12,14 +12,16 @@ venv/
 .env
 
 # --- Disk discipline (50 GB budget): never commit heavy artifacts ---
-# Models / checkpoints / adapters
+# Models / checkpoints / adapters / training runs
 *.safetensors
 *.ckpt
 *.pt
 *.bin
 checkpoints/
 adapters/
+adapters/*/checkpoints/
 outputs/
+wandb/
 
 # Datasets / benchmark assets (LIBERO, LIBERO-Plus ~6.4GB) and third-party source installs
 data/libero/
@@ -55,4 +57,4 @@ third_party/LIBERO-plus/
 deploy.log
 /tmp/
 videos/
-vcr_phase*.zip
+*.zip

@@ -6,11 +6,13 @@ risks a 2h hang. Instead we run each task as its own eval call with a timeout; a
 is skipped (recorded as missing) and the batch continues. Each completed task is flushed.
 """
 from __future__ import annotations
-import csv, subprocess, sys
+import csv
+import subprocess
+import sys
 from pathlib import Path
 sys.path.insert(0, ".")
-from eval.lerobot_runner import run_eval
-from eval.phase2_collapse import select_cell_task_ids, SUITE, POLICY_PATH
+from eval.runners.lerobot_runner import run_eval
+from eval.runners.phase2_collapse import select_cell_task_ids, SUITE, POLICY_PATH
 
 OUT = Path("analysis/runs/phase2_collapse.csv")
 N_EP = 5
@@ -25,7 +27,9 @@ def main():
 
     def flush():
         with OUT.open("w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=fields); w.writeheader(); w.writerows(rows)
+            w = csv.DictWriter(f, fieldnames=fields)
+            w.writeheader()
+            w.writerows(rows)
 
     for level in [2, 4]:
         task_ids = select_cell_task_ids(SUITE, "noise", level, 12)

@@ -168,7 +168,8 @@ def _libero_obs_to_smolvla(obs, instruction: str, tokenizer, device: str = "cuda
       * **Language**: HF tokenizer with ``max_length=48``; attention_mask cast to bool
         (LeRobot's eager_attention_forward expects bool).
     """
-    import numpy as np, torch
+    import numpy as np
+    import torch
     import torch.nn.functional as F
 
     def _prep_image(arr_hw3_uint8):
@@ -228,7 +229,8 @@ def _run_one_trial(policy, task_uid: str, seed: int, *, max_steps: int | None = 
       * Per-suite ``max_steps`` (default = LIBERO_SUITE_MAX_STEPS)
       * Success = ``env.check_success()`` checked every step
     """
-    import numpy as np, torch
+    import numpy as np
+    import torch
     from perturb.libero_plus_wrapper import make_perturbed_env, libero_reset_with_init
 
     if max_steps is None:

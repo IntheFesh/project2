@@ -1,0 +1,46 @@
+name: CI
+
+# Off-GPU lint + tests only. The heavy stack (cu128 torch, LeRobot, LIBERO-Plus)
+# is NOT installed here: `uv sync` resolves just the core + dev deps
+# (numpy/scipy/pandas/matplotlib/pyyaml/tqdm + pytest/ruff). The test suite is
+# pure logic; every GPU/lerobot code path is a seam, so it runs green without torch.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: lint + test (off-GPU, Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync off-GPU deps (no torch / no lerobot)
+        run: uv sync
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Pytest (pure logic; GPU/lerobot paths are seams)
+        run: uv run pytest
+
+      - name: Stats regression (phase5_summary regenerates identically)
+        run: |
+          cp analysis/runs/phase5_summary.md /tmp/phase5_summary.md.orig
+          uv run python -m eval.runners.phase5_stats > /dev/null
+          diff /tmp/phase5_summary.md.orig analysis/runs/phase5_summary.md

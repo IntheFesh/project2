@@ -9,9 +9,9 @@ import pytest
 
 MODULES = [
     "eval.metrics",
-    "eval.bootstrap",
-    "eval.paired",
-    "eval.holm",
+    "eval.stats.bootstrap",
+    "eval.stats.paired",
+    "eval.stats.holm",
     "eval.budget",
     "eval.probe",
     "eval.stats",
