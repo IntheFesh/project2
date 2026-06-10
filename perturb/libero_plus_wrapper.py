@@ -342,7 +342,8 @@ def make_perturbed_env(task_id: str, *, camera_heights: int = LIBERO_OBS_HEIGHT,
       * ``env._libero_suite``             -- suite name (for max_steps lookup)
       * ``env._libero_init_states``       -- the full init-states tensor (len ~50 per task)
     """
-    import io, contextlib
+    import io
+    import contextlib
 
     @contextlib.contextmanager
     def _maybe_silence():

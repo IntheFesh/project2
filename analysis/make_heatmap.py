@@ -40,7 +40,8 @@ def main():
         with csv_path.open() as f:
             for r in csv.DictReader(f):
                 k = (r["condition"], r["family"], int(r["level"]))
-                agg[k][0] += int(r["success"]); agg[k][1] += 1
+                agg[k][0] += int(r["success"])
+                agg[k][1] += 1
 
     M = np.full((len(ROW_ORDER), len(COL_ORDER)), np.nan)
     N = np.full_like(M, 0)
@@ -48,13 +49,16 @@ def main():
         for j, key in enumerate(COL_ORDER):
             s, n = agg.get((cond, *key), (0, 0))
             if n:
-                M[i, j] = 100 * s / n; N[i, j] = n
+                M[i, j] = 100 * s / n
+                N[i, j] = n
 
     fig, ax = plt.subplots(figsize=(11.5, 3.4))
     cmap = plt.cm.RdYlGn  # red (bad) -> green (good)
     im = ax.imshow(M, cmap=cmap, vmin=0, vmax=100, aspect="auto")
-    ax.set_xticks(range(len(COL_LABELS))); ax.set_xticklabels(COL_LABELS, rotation=20, ha="right")
-    ax.set_yticks(range(len(ROW_LABELS))); ax.set_yticklabels(ROW_LABELS)
+    ax.set_xticks(range(len(COL_LABELS)))
+    ax.set_xticklabels(COL_LABELS, rotation=20, ha="right")
+    ax.set_yticks(range(len(ROW_LABELS)))
+    ax.set_yticklabels(ROW_LABELS)
     ax.set_xlabel("perturbation family x level")
     ax.set_title("Recovery heatmap -- success rate (%), LIBERO-Plus spatial suite",
                  loc="left", fontsize=11)
