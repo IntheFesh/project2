@@ -1,0 +1,37 @@
+# Condition C -- perturbation-targeted augmentation (Phase 3, GENERATED RECORD).
+# Source of truth = data/augment/visual_aug.py (_FULL_MAGNITUDE_PARAMS + build_targeted_tfs).
+# Driven through the verified lerobot-train CLI via --dataset.image_transforms.tfs (train/train_lora.py).
+#
+# Fidelity (honesty guard, technical_report S8):
+#   lighting/noise = FAITHFUL ; texture/viewpoint = 2-D PROXY ; layout = held-out (never augmented).
+enabled: true
+rank: 16
+lora_alpha: 32        # alpha/r = 2.0 (FIX: bare --peft default gave alpha=8 -> scale 0.5)
+max_num_transforms: 3 # match condition B (LeRobot default): 3 of N applied per image
+random_order: false
+families: [viewpoint, lighting, texture, noise]
+tfs:
+  c_view_persp:
+    type: RandomPerspective
+    weight: 1.0
+    kwargs: {"distortion_scale": 0.3, "p": 1.0}
+  c_view_affine:
+    type: RandomAffine
+    weight: 1.0
+    kwargs: {"degrees": 0.0, "translate": [0.1, 0.1]}
+  c_lighting:
+    type: ColorJitter
+    weight: 1.0
+    kwargs: {"brightness": [0.6, 1.4], "contrast": [0.6, 1.4]}
+  c_texture_sat:
+    type: ColorJitter
+    weight: 1.0
+    kwargs: {"saturation": [0.6, 1.4]}
+  c_texture_blur:
+    type: GaussianBlur
+    weight: 1.0
+    kwargs: {"kernel_size": 5, "sigma": [0.1, 1.5]}
+  c_noise:
+    type: GaussianNoise
+    weight: 1.0
+    kwargs: {"sigma": 0.08, "clip": true}

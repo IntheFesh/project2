@@ -55,3 +55,4 @@ third_party/LIBERO-plus/
 deploy.log
 /tmp/
 videos/
+vcr_phase*.zip

@@ -55,11 +55,12 @@ def build_eval_command(
     seed: int,
     is_libero_plus: bool,
     batch_size: int = 1,
+    episode_length: int | None = None,
 ) -> list[str]:
     """Construct the ``lerobot-eval`` argv for one eval call."""
     env_type = "libero_plus" if is_libero_plus else "libero"
     task_ids_str = "[" + ",".join(str(t) for t in task_ids) + "]"
-    return [
+    cmd = [
         "lerobot-eval",
         f"--policy.path={policy_path}",
         f"--policy.num_steps={_SMOLVLA_NUM_STEPS}",
@@ -73,6 +74,9 @@ def build_eval_command(
         f"--output_dir={output_dir}",
         f"--seed={seed}",
     ]
+    if episode_length is not None:
+        cmd.append(f"--env.episode_length={episode_length}")
+    return cmd
 
 
 def parse_eval_info(eval_info_path: str | Path) -> list[dict]:
@@ -101,6 +105,7 @@ def run_eval(
     output_dir: str | Path | None = None,
     batch_size: int = 1,
     timeout_s: int | None = 600,  # per-call cap; EGL can hang on noise renders
+    episode_length: int | None = None,
 ) -> list[dict]:
     """Run one ``lerobot-eval`` invocation and return parsed per-episode success rows.
 
@@ -133,6 +138,7 @@ def run_eval(
         seed=seed,
         is_libero_plus=is_libero_plus,
         batch_size=batch_size,
+        episode_length=episode_length,
     )
     subprocess.run(cmd, env=env, check=True, timeout=timeout_s)
 
