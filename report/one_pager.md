@@ -1,42 +1,49 @@
-# VLA-Collapse-Recover — One-Pager
+# VLA-Collapse-Recover · One-Pager
 
-> Skeleton. All numbers `TBD` from real runs. Reproducible study; no novelty claimed.
+**Diagnostic eval framework for vision-language-action models, single GPU, < 1 GPU-day.**
+[github.com/IntheFesh/project2](https://github.com/IntheFesh/project2)
 
-**Question.** Do open VLAs that ace clean LIBERO actually perceive the scene, or exploit shortcuts
-that break under a moved camera / changed lighting — and which training intervention most *provably*
-repairs that brittleness?
+---
 
-**Two contributions.** (1) A reproducible measurement of visual-perturbation **collapse → recovery**
-from perturbation-targeted LoRA, single GPU under 5 days. (2) **A diagnostic-probe battery** that
-distinguishes **representation-level fixing from symptom patching** (`docs/PROBES.md`). The
-paired-statistics machinery is **supporting infrastructure** (shared with the author's prior
-**PolicyArena** project), not a headline claim.
+**Question.** Open VLAs collapse under visual perturbation. Does LoRA fine-tuning
+fix the *representation* (transfers to held-out families) or just *patch symptoms*
+on whichever families it was trained on?
 
-**Probes (the contribution).**
-- **Held-out cross-family generalization** — `generalization_gap` (in-dist − held-out): small ⇒ a
-  real fix, large ⇒ family-specific patch.
-- **Language-conditioning sensitivity** — `SR_correct − SR_ablated` (paired): ≈ 0 ⇒ ignores language;
-  should rise after a real fix.
-- **Visual-feature-shift** *(optional / scaffolded)* — vision-encoder cosine distance, clean vs perturbed.
+**Design.** Three conditions on SmolVLA-LIBERO — A: base, B: LoRA + standard
+augmentation, C: LoRA + perturbation-targeted augmentation — evaluated on the same
+deterministic init states across viewpoint / lighting / texture / noise at L2 / L4,
+plus a held-out `layout` family no condition ever sees during augmentation. 1,790
+per-episode trials, paired at `(task_id, episode_index)` for McNemar and paired
+bootstrap; Holm-Bonferroni where appropriate.
 
-**Approach.** SmolVLA (~450M, arXiv:2506.01844) on a LIBERO subset; LIBERO-Plus **pre-built**
-perturbation tasks selected by `(family, level)`, run once each. Compare **A** base · **B** LoRA +
-standard aug · **C** LoRA + perturbation-targeted aug (**D** feature-mod, STRETCH). Single RTX 5090,
-< 5-day GPU budget (a deliberate scoping-discipline feature).
+**Headline finding.** LoRA improves task representation in a way that **transfers
+across perturbation families, independently of which family was augmented** — yet
+perturbation-family-matched augmentation provides no systematic advantage over
+generic augmentation.
 
-**Headline (the point).** Read the probes **via** the A/B/C comparison + paired statistics (not the recovery size):
+| Hypothesis | Result | Significance |
+|---|---|---|
+| H1: LoRA + std aug lifts robustness (A vs B, pooled) | ΔSR = **+7.4 pp** [+2.8, +11.9] | McNemar p ≈ **0.0018** |
+| H2: Targeted aug beats standard (B vs C, per family, Holm) | lighting **−10.8**, noise +3.3, texture +3.3 pp | all Holm-p > 0.05 |
+| H3: Generalization to held-out `layout` (A vs B) | ΔSR = **+15.0 pp** [+5.0, +25.0] | McNemar p ≈ **0.0072** |
 
-| | Perturbed SR (in-dist) | Recovery | Δ_method (C−B) | 95% CI | Holm *p* | Gen. gap (in−held) |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| A / B / C | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
+**Honest negative findings** *(treated as conclusions, not hidden)*: viewpoint
+stays at 0% under all three conditions (2-D augmentation cannot confer 3-D
+viewpoint invariance, as flagged up-front); noise actually *worsens* under LoRA
+(24.4% → 3.3% / 10.0%), suggesting photometric augmentation shifts the visual
+prior toward clean-looking features; C's lighting underperforms B's at our
+augmentation magnitude.
 
-**Rigor.** Bootstrap 95% CIs (≥10k); **paired** test at **fixed task IDs** (matched by
-`(task_id, level, seed)`); Holm–Bonferroni across families; rliable-style IQM aggregate. In-dist vs
-held-out always labeled. Only delta claims — base absolute SR may not match papers.
+**Stack.** SmolVLA · LeRobot 0.5.2 · PEFT-LoRA · paired bootstrap + McNemar +
+Holm-Bonferroni · crash-safe resume-able eval harness. Single RTX 5090.
 
-**Deliverables.** Collapse curve · recovery + intervention table + held-out **generalization gap** ·
-**language-sensitivity** ΔSR · 2–3 before/after demo clips · diagnostic-probe report
-(`scripts/analyze_results.py`).
+**Reproducibility.** `make stats` regenerates the full statistical summary
+byte-identically from raw per-episode CSVs (`analysis/runs/*.csv`).
+[REPRODUCING.md](https://github.com/IntheFesh/project2/blob/main/docs/REPRODUCING.md)
+walks the pipeline end-to-end.
 
-**Caveat.** Condition-C `viewpoint` augmentation is a weak 2-D proxy for true 3-D camera-viewpoint
-perturbation (see report limitations).
+**Position.** Diagnostic, not a method paper. No novelty claimed. Single-seed.
+Companion to [PolicyArena](https://github.com/IntheFesh/project1) — same
+paired-statistics philosophy on LLM-agent policy compliance.
+
+*`<TODO: name>` · M.A. Statistics · `<TODO: email>`*
