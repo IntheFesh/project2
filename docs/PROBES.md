@@ -125,3 +125,26 @@ continuity correction); the H2 family-wise p-values are Holm-Bonferroni correcte
 
 (VLA-specific perturbation/robustness prior art — LIBERO-Plus, LIBERO-PRO, RobustVLA, etc. — is in
 the README "Prior art" section.)
+
+## 5. Future work (explicit roadmap)
+
+The single-seed budget deferred several probes whose scaffolding already lives in the repo. These
+are **explicit roadmap items**, not vague aspirations:
+
+- **Probe 3 — visual-feature-shift** *(scaffolded: `eval/probe.py::feature_shift_probe`)*. Cosine
+  distance of the **vision encoder's** features, clean vs perturbed; a *decrease* after LoRA is
+  direct evidence the encoder moved toward perturbation-invariant features. Deferred because it is
+  encoder-internal and fragile (hooks into SmolVLA's vision tower).
+- **Language-conditioning probe** *(scaffolded: `eval/probe.py`, `language_sensitivity_paired`)*.
+  Run the same task IDs under correct / blank / shuffled / mismatched instructions and measure
+  paired ΔSR; ΔSR ≈ 0 ⇒ the policy effectively ignores language (a vision→action lookup). The pure
+  instruction construction + paired-stat code is unit-tested; only the GPU rollout under each
+  instruction variant is unrun.
+- **Multi-seed extension.** Repeat the key B/C comparison across ≥ 3 independent LoRA training runs
+  to add seed-level variance to the within-seed paired statistics reported here.
+- **Augmentation-magnitude ablation.** The Condition-C `lighting` < B finding (heavier ±0.4 jitter
+  hurts) motivates sweeping the targeted-augmentation magnitude rather than fixing it at full scale.
+- **3-D viewpoint augmentation.** Replace the 2-D image-space viewpoint proxy with fine-tuning on
+  LIBERO-Plus's released perturbation training data (stubbed in
+  `configs/lora/condition_c_realdata.yaml`) to test whether a true 3-D signal can move the
+  `viewpoint` floor off 0%.
