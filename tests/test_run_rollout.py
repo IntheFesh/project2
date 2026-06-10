@@ -73,8 +73,14 @@ def test_write_summary_roundtrip(tmp_path) -> None:
     assert len(summary["aggregate"]) == 2
 
 
-def test_gpu_steps_are_seams() -> None:
-    with pytest.raises(NotImplementedError):
-        _load_policy("configs/model/smolvla.yaml", None)
-    with pytest.raises(NotImplementedError):
-        _run_one_trial(object(), "libero_spatial:0", 0)
+def test_gpu_seams_implemented_phase1() -> None:
+    """Phase 1: _load_policy and _run_one_trial are implemented (no longer NotImplementedError).
+
+    Off-GPU pytest cannot actually call them (would require CUDA + an HF download + LIBERO env);
+    we only verify the seams are callable. Real end-to-end behavior is exercised by GPU smoke
+    tests outside the test suite. The LoRA-adapter branch of _load_policy still raises
+    NotImplementedError (Phase 3), but testing that here would force an HF download first, so we
+    defer that check to manual Phase-3 work.
+    """
+    assert callable(_load_policy)
+    assert callable(_run_one_trial)

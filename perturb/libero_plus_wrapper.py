@@ -14,6 +14,9 @@ LIBERO-Plus ``benchmark_scripts/``). All verified strings/paths come from
 
 from __future__ import annotations
 
+import re
+import torch
+
 import random
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
@@ -228,22 +231,178 @@ def parse_task_uid(uid: str) -> tuple[str, int]:
         raise ValueError(f"task uid must end in an integer id, got {uid!r}") from exc
 
 
-def make_perturbed_env(task_id: str, **kwargs):
-    """Build the LIBERO-Plus simulator env for a pre-built task ``task_id`` (``"<suite>:<id>"``).
+#: Per-suite episode-length budget (mirrors LeRobot envs/libero.py TASK_SUITE_MAX_STEPS).
+LIBERO_SUITE_MAX_STEPS: dict[str, int] = {
+    "libero_spatial": 280,
+    "libero_object": 280,
+    "libero_goal": 300,
+    "libero_10": 520,
+    "libero_90": 400,
+}
+#: Default if a suite is unknown.
+LIBERO_DEFAULT_MAX_STEPS = 300
+#: SmolVLA-LIBERO was trained at 256x256.
+LIBERO_OBS_HEIGHT = 256
+LIBERO_OBS_WIDTH = 256
+#: Number of dummy "no-op" steps after reset to let the scene physics settle.
+LIBERO_NUM_STEPS_WAIT = 10
 
-    GPU/simulator seam. The perturbation is baked into the task, so there is no ``PerturbSpec``
-    argument. Implementation must mirror LIBERO-Plus ``benchmark_scripts/`` (VERIFIED API)::
 
+def get_libero_dummy_action():
+    """No-op 7-D action used during the post-reset settle phase. Matches LeRobot envs/libero.py."""
+    return [0, 0, 0, 0, 0, 0, -1]
+
+
+# Regex to strip LIBERO-Plus task-name suffixes that aren't part of the natural-language
+# instruction. The Task NamedTuple builds .language as " ".join(name.split("_")), which leaves
+# garbage like "table 1" in the instruction string. The 5 known LIBERO-Plus suffix families:
+#   _table_N, _tb_N, _view_N, _language_N, _light_N
+# All are integer-indexed scene variants and carry no semantic meaning for the task itself.
+_LIBERO_PLUS_SUFFIX_RE = re.compile(
+    r"\s+(?:table|tb|view|language|light)\s+\d+\s*$"
+)
+
+
+def _clean_libero_plus_instruction(raw: str) -> str:
+    """Strip trailing scene-variant suffix from a LIBERO-Plus task instruction.
+
+    ``"pick up the black bowl ... place it on the plate table 1"``
+        -> ``"pick up the black bowl ... place it on the plate"``
+    """
+    return _LIBERO_PLUS_SUFFIX_RE.sub("", raw).strip()
+
+
+def _load_libero_plus_init_states(bench, idx):
+    """Load init states for task ``idx`` using weights_only=False (trusted pickle).
+
+    Re-implements ``Benchmark.get_task_init_states`` (see
+    ``LIBERO-plus/libero/libero/benchmark/__init__.py:192-243``) but passes
+    ``weights_only=False`` to ``torch.load``. The suffix routing logic
+    (``_table_N``, ``_tb_N``, ``_view_N``, ``_language_N``, ``_light_N``, ``_add_``,
+    ``_level``) mirrors LIBERO-Plus exactly so file resolution is identical.
+    """
+    import os
+    from libero.libero import get_libero_path
+
+    task = bench.tasks[idx]
+    init_states_file = task.init_states_file
+    problem_folder = task.problem_folder
+    base_dir = get_libero_path("init_states")
+
+    # Routing logic copied from LIBERO-plus benchmark/__init__.py::get_task_init_states.
+    init_states_path = None
+    if "_language_" in init_states_file:
+        rebased = init_states_file.split("_language_")[0] + "." + init_states_file.split(".")[-1]
+        init_states_path = os.path.join(base_dir, problem_folder, rebased)
+    elif "_view_" in init_states_file:
+        rebased = init_states_file.split("_view_")[0] + "." + init_states_file.split(".")[-1]
+        init_states_path = os.path.join(base_dir, problem_folder, rebased)
+    elif "_table_" in init_states_file:
+        rebased = re.sub(r"_table_\d+", "", init_states_file)
+        init_states_path = os.path.join(base_dir, problem_folder, rebased)
+    elif "_tb_" in init_states_file:
+        rebased = re.sub(r"_tb_\d+", "", init_states_file)
+        init_states_path = os.path.join(base_dir, problem_folder, rebased)
+    elif "_light_" in init_states_file:
+        rebased = init_states_file.split("_light_")[0] + "." + init_states_file.split(".")[-1]
+        init_states_path = os.path.join(base_dir, problem_folder, rebased)
+    elif "_add_" in init_states_file or "_level" in init_states_file:
+        init_states_path = os.path.join(base_dir, "libero_newobj", problem_folder, init_states_file)
+    else:
+        init_states_path = os.path.join(base_dir, problem_folder, init_states_file)
+
+    if not os.path.isfile(init_states_path):
+        raise FileNotFoundError(
+            f"init states file missing for task idx={idx} name={task.name!r}: {init_states_path}"
+        )
+    init_states = torch.load(init_states_path, weights_only=False)  # nosec B614
+    if "_add_" in init_states_file or "_level" in init_states_file:
+        init_states = init_states.reshape(1, -1)
+    return init_states
+
+
+def make_perturbed_env(task_id: str, *, camera_heights: int = LIBERO_OBS_HEIGHT,
+                       camera_widths: int = LIBERO_OBS_WIDTH, silent: bool = True,
+                       init_state_id: int = 0):
+    """Build a LIBERO env for ``task_id="<suite>:<id>"``, ready for SmolVLA rollout.
+
+    Uses LIBERO-Plus official APIs:
+      * ``bench.get_task_bddl_file_path(idx)`` for the BDDL file path
+      * ``bench.get_task_init_states(idx)`` for the init-states tensor (handles all 5
+        suffix-based path rewrites: _table_N, _tb_N, _view_N, _language_N, _light_N)
+
+    Mirrors LeRobot ``envs/libero.py::LiberoEnv`` setup so the policy sees the same observation
+    distribution it was trained on:
+      1. set_init_state to a fixed init state (controls reproducibility across A/B/C conditions)
+      2. step 10 dummy actions so contact physics settles
+      3. force relative (delta) controller -- SmolVLA was trained on delta actions
+
+    The returned env carries:
+      * ``env._libero_task_instruction``  -- the task's natural-language instruction (cleaned)
+      * ``env._libero_suite``             -- suite name (for max_steps lookup)
+      * ``env._libero_init_states``       -- the full init-states tensor (len ~50 per task)
+    """
+    import io, contextlib
+
+    @contextlib.contextmanager
+    def _maybe_silence():
+        if silent:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                yield
+        else:
+            yield
+
+    with _maybe_silence():
         from libero.libero import benchmark
         from libero.libero.envs import OffScreenRenderEnv
-        bench = benchmark.get_benchmark_dict()[suite]()
-        task = bench.get_task(task_index)
-        env = OffScreenRenderEnv(bddl_file_name=<task bddl>, camera_heights=128, camera_widths=128)
 
-    TODO(verify on GPU box): whether the JSON ``id`` is 0- or 1-based vs ``get_task`` and the exact
-    ``bddl_file`` derivation (see docs/LIBERO_PLUS_NOTES.md).
-    """
-    raise NotImplementedError(
-        "Phase 2: construct the LIBERO-Plus env for the pre-built task "
-        f"{task_id!r} (install LIBERO-Plus as the `libero` drop-in; mirror benchmark_scripts)."
-    )
+        suite, idx = parse_task_uid(task_id)
+        bench_dict = benchmark.get_benchmark_dict()
+        if suite not in bench_dict:
+            raise ValueError(f"unknown suite {suite!r}; available: {sorted(bench_dict)}")
+        bench = bench_dict[suite]()
+        if not (0 <= idx < bench.get_num_tasks()):
+            raise IndexError(
+                f"task index {idx} out of range for suite {suite!r} (has {bench.get_num_tasks()})"
+            )
+        # PyTorch 2.6+ defaults torch.load to weights_only=True, but LIBERO-Plus's
+        # get_task_init_states does a bare torch.load on init-states files. The pickle
+        # contains numpy ndarrays plus several internal numpy globals; enumerating them
+        # all for safe_globals is brittle across numpy versions. Since the init-states
+        # files are robosuite training-pipeline artifacts shipped with LIBERO-Plus
+        # (not user-supplied), we trust them and load with weights_only=False directly.
+        # We re-implement the suffix-resolution logic ourselves to bypass the bare
+        # torch.load inside LIBERO-Plus.
+        task = bench.get_task(idx)
+        bddl = bench.get_task_bddl_file_path(idx)
+        init_states = _load_libero_plus_init_states(bench, idx)
+
+        env = OffScreenRenderEnv(
+            bddl_file_name=bddl,
+            camera_heights=camera_heights,
+            camera_widths=camera_widths,
+        )
+    env._libero_task_instruction = _clean_libero_plus_instruction(task.language)
+    env._libero_suite = suite
+    env._libero_init_states = init_states
+    env._libero_init_state_id = init_state_id
+    return env
+
+
+def libero_reset_with_init(env, *, seed: int = 0):
+    """Reset ``env`` with a deterministic init state + post-reset settle (mirrors LiberoEnv.reset)."""
+    import numpy as np
+
+    env.seed(seed)
+    env.reset()
+    init = env._libero_init_states[env._libero_init_state_id % len(env._libero_init_states)]
+    obs = env.set_init_state(init)
+    # Settle the simulation: 10 dummy steps so contacts stabilise (matches LiberoEnv).
+    dummy = np.asarray(get_libero_dummy_action(), dtype=np.float32)
+    for _ in range(LIBERO_NUM_STEPS_WAIT):
+        obs, _r, _d, _i = env.step(dummy)
+    # Force RELATIVE (delta-action) controller -- SmolVLA-LIBERO outputs deltas.
+    for robot in env.robots:
+        robot.controller.use_delta = True
+    return obs

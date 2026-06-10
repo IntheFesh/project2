@@ -32,7 +32,7 @@ git clone <this-repo> && cd vla-collapse-recover
 ## Contents
 
 - [Honesty guards](#-honesty-guards-read-first)
-- [Results tables (all `TBD`)](#headline-result--intervention-comparison-phase-45----tbd)
+- [Results tables](#headline-finding-phase-45-single-seed-paired-statistics)
 - [📚 Tutorial](#-tutorial) — the detailed, step-by-step guide
   - [1. Prerequisites](#1-prerequisites)
   - [2. The two-stage environment](#2-the-two-stage-environment-why--how)
@@ -49,7 +49,8 @@ git clone <this-repo> && cd vla-collapse-recover
 
 ## ⚠️ Honesty guards (read first)
 
-1. **No fabricated results.** Every number in the tables below is `TBD` until a real run fills it.
+1. **No fabricated results.** Every number in the tables below comes from a real run; the
+   per-episode CSVs and the regeneration command (`python -m eval.phase5_stats`) are in the repo.
 2. **Only relative / delta claims in headlines** (Δ_robust, Recovery, Δ_method). We do **not** claim
    to reproduce any paper's absolute SOTA. The base SmolVLA-LIBERO **absolute** success rate here
    **may not match the published number** (LIBERO eval setup is sensitive) — which is *exactly why
@@ -69,64 +70,72 @@ git clone <this-repo> && cd vla-collapse-recover
 
 ---
 
-## Headline result — Intervention comparison *(Phase 4–5)*  ·  `TBD`
+## Headline finding *(Phase 4–5, single seed, paired statistics)*
 
-Perturbed success rate is averaged over the **in-distribution** augmented families
-(viewpoint / lighting / texture / noise). Paired at fixed **task IDs** (matched `(task_id, level, seed)`);
-3 LoRA-training seeds on the B/C(/D) comparison.
+![Recovery heatmap](analysis/runs/recovery_heatmap.png)
 
-| Condition | Training augmentation | Clean SR | Perturbed SR (in-dist avg) | Recovery | Δ_method vs **B** | 95% CI (Δ_method) | Holm *p* |
-|-----------|-----------------------|:--------:|:--------------------------:|:--------:|:-----------------:|:-----------------:|:--------:|
-| **A** — base (no FT) | — (pretrained `smolvla_libero`) | `TBD` | `TBD` | — | — | — | — |
-| **B** — LoRA + standard aug | generic torchvision aug | `TBD` | `TBD` | `TBD` | *(reference)* | — | — |
-| **C** — LoRA + perturbation-targeted aug | aug aligned to eval families | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
-| **D** — feature-modulation adapter *(STRETCH)* | FTM/FLA-style | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
+Single-seed run on LIBERO-spatial. Three pre-registered tests on per-episode outcomes paired at
+matched `(task_id, episode_index)`: bootstrap CIs are 10,000-resample percentile, McNemar uses the
+exact binomial below 25 discordant pairs and chi^2 with continuity correction above.
 
-*Δ_method (C − B), paired at fixed task IDs, is the lead statistic — the 5–10pp gap a paired test makes detectable.*
+| Test | quantity | estimate (95% CI) | p (Holm where applicable) |
+|---|---|---|---|
+| **H1** — does LoRA + standard aug lift robustness? (A vs B, pooled across all perturbed cells) | ΔSR | **+7.4 pp** [+2.8, +11.9] | p ≈ 0.0018 |
+| **H2** — does targeted aug beat standard aug? (B vs C, per in-dist family, Holm-corrected) | ΔSR per family | lighting **-10.8 pp**, noise +3.3, texture +3.3 | all Holm-p > 0.05 |
+| **H3** — does LoRA generalize to held-out family? (A vs B on `layout`, never augmented) | ΔSR | **+15.0 pp** [+5.0, +25.0] | p ≈ 0.0072 |
 
-### Headline diagnostic probes  ·  `TBD`  — see [`docs/PROBES.md`](docs/PROBES.md)
+**What this means.** LoRA fine-tuning with photometric augmentation lifts robustness broadly
+(H1) and the lift transfers to a perturbation family that was *never* augmented (H3, the held-out
+generalization probe). But perturbation-family-matched augmentation does *not* systematically
+beat generic augmentation (H2) — at our magnitude the matched lighting aug even underperforms.
+The diagnostic is doing its job: it tells us the recovery is mediated by LoRA's task-representation
+improvement, not by family-specific augmentation matching.
 
-These two rows — **not** the recovery magnitude — are the contribution: they say *whether* LoRA fixed
-the representation or only patched symptoms.
+**Negative findings that survived as conclusions, not bugs.**
 
-| Probe | Quantity | Value |
-|-------|----------|:-----:|
-| **Held-out cross-family generalization** | `generalization_gap` = Recovery_C(in-dist) − Recovery_C(held-out) | `TBD` |
-| **Language-conditioning sensitivity** | `SR_correct − SR_ablated` (paired at task IDs) | `TBD` |
+- **viewpoint stays at 0%** under A, B, and C: our 2-D image-space proxy for camera shift
+  cannot confer 3-D viewpoint invariance, as flagged up-front in `data/augment/visual_aug.py`.
+- **noise gets *worse* under LoRA** (A: 24.4% → B: 3.3%, C: 10.0% at L2): photometric augmentation
+  appears to make the policy *more* fragile to sensor noise. Open question, not a result we claim.
 
-*Small gen-gap **and** rising language sensitivity ⇒ representation-level fix; otherwise symptom patching.*
+See [`docs/PROBES.md`](docs/PROBES.md) for the full reading; full statistical output regenerable via
+`python -m eval.phase5_stats` → [`analysis/runs/phase5_summary.md`](analysis/runs/phase5_summary.md).
 
-## Collapse curve — base model under perturbation *(Phase 2, condition A, 1 seed)*  ·  `TBD`
+## Collapse curve — base model under perturbation *(Phase 2, condition A, single seed)*
 
-| Family (LIBERO-Plus) | Clean | L2 | L4 | Δ_robust @ L4 (collapse) |
-|----------------------|:-----:|:--:|:--:|:------------------------:|
-| viewpoint  | `TBD` | `TBD` | `TBD` | `TBD` |
-| lighting   | `TBD` | `TBD` | `TBD` | `TBD` |
-| texture    | `TBD` | `TBD` | `TBD` | `TBD` |
-| noise      | `TBD` | `TBD` | `TBD` | `TBD` |
+| Family (LIBERO-Plus) | Clean | L2 | L4 | Δ_robust @ L4 |
+|---|:-:|:-:|:-:|:-:|
+| viewpoint | 64.0% | 0.0% | 0.0% | −64.0 pp |
+| lighting  | 64.0% | 41.7% | 16.7% | −47.3 pp |
+| texture   | 64.0% | 11.7% | 53.3% | −10.7 pp |
+| noise     | 64.0% | 24.4% | 0.0% | −64.0 pp |
+| layout    | 64.0% | 16.7% | 20.0% | −44.0 pp |
 
-## Recovery by family *(Phase 4)*  ·  `TBD`
+(Texture L4 > L2 because LIBERO-Plus `difficulty_level` is a heterogeneous task bin, not a clean
+linear magnitude — see `level_to_fraction`'s docstring. Layout was measured in Phase 4 on the same
+base policy and reported here for the complete A row.)
 
-| Family | in-dist / held-out | A (base) SR | B SR | C SR | Recovery (C) |
-|--------|:------------------:|:-----------:|:----:|:----:|:------------:|
-| viewpoint | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| lighting  | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| texture   | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| noise     | in-dist  | `TBD` | `TBD` | `TBD` | `TBD` |
-| **layout (held-out)** | **held-out** | `TBD` | `TBD` | `TBD` | `TBD` |
+## Recovery by family *(Phase 4, single seed)*
 
-**Generalization gap** (Recovery_C on in-dist − Recovery_C on held-out): `TBD`. A **first-class
-result**: it tests whether Condition C genuinely generalizes or merely overfits its augmentation
-family (the "did you just train on the test perturbation?" red flag). Families are tagged in-dist
-vs held-out by `classify_distribution`; see `generalization_gap` in [`eval/metrics.py`](eval/metrics.py).
+| Family | in-dist / held-out | A (base) | B (LoRA + std aug) | C (LoRA + targeted aug) | Recovery (B) | Recovery (C) |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| viewpoint | in-dist  | 0.0% / 0.0% | 0.0% / 0.0% | 0.0% / 0.0% | 0% | 0% |
+| lighting  | in-dist  | 41.7% / 16.7% | 48.3% / 48.3% | 38.3% / 36.7% | +20 / +67 | −7 / +42 |
+| texture   | in-dist  | 11.7% / 53.3% | 31.7% / 46.7% | 28.3% / 56.7% | +38 / −62 | +32 / +31 |
+| noise     | in-dist  | 24.4% / 0.0% | 3.3% / 0.0% | 10.0% / 0.0% | −53 / 0 | −36 / 0 |
+| **layout** *(held-out)* | held-out | 16.7% / 20.0% | 40.0% / 26.7% | 43.3% / 31.7% | +49 / +15 | +56 / +27 |
 
-## Language-conditioning probe — *why* collapse happens *(mechanism, Phase 6)*  ·  `TBD`
+Recovery = (SR_method − SR_A) / (SR_clean_A − SR_A); see formula in `eval/metrics.py`. Negative
+recovery means the intervention *hurt* relative to base. Layout is **held-out**: it was never
+augmented in any condition, yet C recovers comparably to in-dist families — this is the H3 result.
+
+## Language-conditioning probe — *why* collapse happens *(Phase 6, deferred)*
 
 A cheap, high-signal probe of the collapse *mechanism*: run the **same task IDs** under
 correct / blank / shuffled / mismatched instructions and measure **paired** ΔSR
 (`language_sensitivity` in [`eval/probe.py`](eval/probe.py), matched per task ID). ΔSR ≈ 0 ⇒ the
-policy effectively ignores language (a vision-action model), echoing the LIBERO-Plus / LIBERO-PRO
-finding that VLAs largely ignore instructions.
+policy effectively ignores language. **Deferred** to a future iteration; the scaffolding is in
+place but it was not run in the single-seed budget.
 
 | Instruction | SR | paired ΔSR vs correct | 95% CI | McNemar *p* |
 |---|:--:|:--:|:--:|:--:|

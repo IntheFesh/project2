@@ -1,0 +1,5 @@
+export HF_HOME="/root/autodl-tmp/vcr/hf"
+export HUGGINGFACE_HUB_CACHE="/root/autodl-tmp/vcr/hf/hub"
+export TRANSFORMERS_CACHE="/root/autodl-tmp/vcr/hf/transformers"
+export HF_DATASETS_CACHE="/root/autodl-tmp/vcr/datasets"
+export TORCH_HOME="/root/autodl-tmp/vcr/torch"

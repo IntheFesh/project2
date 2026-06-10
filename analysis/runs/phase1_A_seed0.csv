@@ -1,0 +1,11 @@
+condition,task_id,family,level,seed,success
+A,libero_spatial:0,unknown,0,0,0
+A,libero_spatial:1,unknown,0,0,0
+A,libero_spatial:2,unknown,0,0,0
+A,libero_object:0,unknown,0,0,0
+A,libero_object:1,unknown,0,0,0
+A,libero_object:2,unknown,0,0,0
+A,libero_goal:0,unknown,0,0,0
+A,libero_goal:1,unknown,0,0,0
+A,libero_goal:2,unknown,0,0,0
+A,libero_10:0,unknown,0,0,0
