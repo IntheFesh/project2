@@ -1,0 +1,91 @@
+% VLA-Collapse-Recover -- arXiv-style technical report (source only; compile optional).
+% Standard packages only (article, geometry, amsmath, hyperref) so it compiles with pdflatex.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{VLA-Collapse-Recover: A Reproducible Diagnostic of Visual-Representation\\
+Quality in Open Vision-Language-Action Models under Perturbation}
+\author{TODO: Author Name\thanks{Fill in before release; see \texttt{CITATION.cff}.}}
+\date{Version 0.1.0 (single-seed run) --- June 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Open Vision-Language-Action (VLA) models such as SmolVLA achieve high success on clean LIBERO but
+\emph{collapse} under LIBERO-Plus visual perturbations (a moved camera, changed lighting, a new
+texture). We reproduce this collapse on a single RTX 5090, delta-only, and ask a diagnostic
+question: does perturbation-targeted LoRA fine-tuning fix the underlying task representation---so
+that robustness \emph{generalizes to a held-out perturbation family}---or does it only patch
+symptoms on the families it was trained on? Using per-episode \emph{paired} statistics (bootstrap
+CIs, McNemar, Holm--Bonferroni) over three conditions (A: base; B: LoRA + standard augmentation; C:
+LoRA + perturbation-targeted augmentation), we find that LoRA's robustness gain transfers to the
+never-augmented \texttt{layout} family ($+15.0$ pp, $p\approx0.0072$) while augmentation-family
+matching yields \emph{no} systematic advantage. The contribution is the diagnostic and its honest
+negative findings, not a new method. This is a single-seed study; a multi-seed extension is future
+work.
+\end{abstract}
+
+\section{Setup}
+We evaluate on a LIBERO-spatial subset with LIBERO-Plus pre-built perturbation instances, graded at
+levels L2 and L4. Augmented (in-distribution) families are \{viewpoint, lighting, texture, noise\};
+the held-out generalization family is \{layout\}, never augmented in any condition. All conditions
+roll out from identical initial states, so every episode is matched by $(\text{task\_id},
+\text{level})$ and a paired test detects the small B-vs-C gap an unpaired test would miss. The base
+model is SmolVLA ($\sim$450M) via LeRobot; B and C are LoRA ($r{=}16$, $\alpha{=}32$). Bootstrap CIs
+use 10{,}000 resamples; McNemar is exact below 25 discordant pairs and continuity-corrected
+$\chi^2$ above; H2 family p-values are Holm--Bonferroni corrected. Base clean success rate is
+$64.0\%$. \textbf{We report only deltas}; absolute success rates are not comparable to published
+numbers and we do not claim to reproduce any paper's SOTA.
+
+\section{Results}
+\begin{center}
+\begin{tabular}{l l l l}
+\hline
+Test & Question & $\Delta$SR (95\% CI) & Significance \\
+\hline
+H1 & LoRA+std aug lifts robustness (A vs B, pooled, $n{=}540$) & $+7.4$ pp $[+2.8, +11.9]$ & $p\approx0.0018$ (sig.) \\
+H2 & targeted vs standard aug (B vs C, per family, Holm) & lighting $-10.8$; noise/tex $+3.3$ & all Holm-$p>0.05$ (n.s.) \\
+H3 & gain reaches held-out \texttt{layout} (A vs B, $n{=}120$) & $+15.0$ pp $[+5.0, +25.0]$ & $p\approx0.0072$ (sig.) \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Reading: a diagnostic, not a method.} The key read-out is the generalization gap
+$=\text{Recovery}_{\text{in-dist}}-\text{Recovery}_{\text{held-out}}$. The held-out gain (H3)
+matching the in-distribution gain (H1), together with no family-matching advantage (H2), indicates
+the recovery is mediated by LoRA's \emph{task-representation} improvement rather than by
+augmentation-family matching---consistent with a representation-level fix, not symptom patching.
+
+\section{Negative findings (real conclusions, not bugs)}
+\begin{itemize}
+  \item \textbf{\texttt{viewpoint} stays at 0\%} under A, B, and C. The Condition-C augmentation for
+  viewpoint is a 2-D image-space proxy (RandomPerspective + RandomAffine), not a 3-D camera shift,
+  and cannot confer 3-D viewpoint invariance. The null is consistent with the proxy hypothesis---a
+  proxy that should fail does fail---not a training bug.
+  \item \textbf{\texttt{noise} gets worse after LoRA} ($24.4\%$ A $\to$ $3.3\%$ B / $10.0\%$ C at
+  L2). Photometric augmentation appears to make the policy \emph{more} fragile to additive sensor
+  noise. We report this as an open question, not a claimed result.
+  \item \textbf{Condition C's \texttt{lighting} underperforms B} ($\Delta_{\text{method}}=-10.8$
+  pp). The targeted $\pm0.4$ jitter is heavier than B's $\pm0.2$ and hurts; ``more targeted'' is
+  worse at this magnitude.
+\end{itemize}
+
+\section{Limitations}
+Single seed (within-seed paired statistics only; a 3-seed run is the natural extension); delta-only
+on a LIBERO-spatial subset; the viewpoint augmentation is a 2-D proxy; Probe~3 (visual feature
+shift) and the language-conditioning probe are scaffolded but unrun in this budget. The
+paired-statistics harness is supporting infrastructure shared with the author's prior PolicyArena
+project, not a contribution of this work.
+
+\begin{thebibliography}{9}
+\bibitem{liberoplus} LIBERO-Plus. arXiv:2510.13626.
+\bibitem{robustvla} RobustVLA. arXiv:2510.00037.
+\bibitem{smolvla} SmolVLA. arXiv:2506.01844.
+\bibitem{precipice} Agarwal et al. Deep RL at the Edge of the Statistical Precipice. NeurIPS 2021. arXiv:2108.13264.
+\bibitem{shortcut} Geirhos et al. Shortcut Learning in Deep Neural Networks. Nature Machine Intelligence 2020. arXiv:2004.07780.
+\end{thebibliography}
+
+\end{document}
