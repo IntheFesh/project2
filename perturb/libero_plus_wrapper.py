@@ -14,10 +14,8 @@ LIBERO-Plus ``benchmark_scripts/``). All verified strings/paths come from
 
 from __future__ import annotations
 
-import re
-import torch
-
 import random
+import re
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -282,6 +280,8 @@ def _load_libero_plus_init_states(bench, idx):
     ``_level``) mirrors LIBERO-Plus exactly so file resolution is identical.
     """
     import os
+
+    import torch
     from libero.libero import get_libero_path
 
     task = bench.tasks[idx]
