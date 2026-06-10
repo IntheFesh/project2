@@ -30,11 +30,11 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from eval.bootstrap import bootstrap_ci
-from eval.holm import holm_bonferroni
-from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.stats.bootstrap import bootstrap_ci
+from eval.stats.holm import holm_bonferroni
+from eval.stats.paired import mcnemar, paired_bootstrap_delta
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PHASE2_CSV = REPO_ROOT / "analysis" / "runs" / "phase2_collapse.csv"
 PHASE4_CSV = REPO_ROOT / "analysis" / "runs" / "phase4_recovery.csv"
 OUT_MD = REPO_ROOT / "analysis" / "runs" / "phase5_summary.md"

@@ -9,8 +9,8 @@ from __future__ import annotations
 import csv, subprocess, sys
 from pathlib import Path
 sys.path.insert(0, ".")
-from eval.lerobot_runner import run_eval
-from eval.phase2_collapse import select_cell_task_ids, SUITE, POLICY_PATH
+from eval.runners.lerobot_runner import run_eval
+from eval.runners.phase2_collapse import select_cell_task_ids, SUITE, POLICY_PATH
 
 OUT = Path("analysis/runs/phase2_collapse.csv")
 N_EP = 5

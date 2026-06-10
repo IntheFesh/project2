@@ -23,8 +23,8 @@ This module only **re-exports** the implementations from ``eval.metrics`` / ``ev
 
 from __future__ import annotations
 
-from eval.bootstrap import bootstrap_ci
-from eval.holm import holm_bonferroni
+from eval.stats.bootstrap import bootstrap_ci
+from eval.stats.holm import holm_bonferroni
 from eval.metrics import (
     delta_method,
     delta_robust,
@@ -32,7 +32,7 @@ from eval.metrics import (
     recovery,
     success_rate,
 )
-from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.stats.paired import mcnemar, paired_bootstrap_delta
 from eval.stats.report import build_report, format_text, read_rows
 
 __all__ = [

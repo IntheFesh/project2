@@ -23,7 +23,7 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LIBERO_ORIG_PATH = REPO_ROOT / "third_party" / "LIBERO-orig"
 
 # Verified-working CLI knobs (GitHub issue #3264 reproduction + our smoke tests).

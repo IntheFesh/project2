@@ -22,8 +22,8 @@ import argparse
 import csv
 from pathlib import Path
 
-from eval.lerobot_runner import run_eval
-from eval.phase2_collapse import (
+from eval.runners.lerobot_runner import run_eval
+from eval.runners.phase2_collapse import (
     CLEAN_LEVEL,
     COLLAPSE_LEVELS,
     POLICY_PATH,
@@ -31,7 +31,7 @@ from eval.phase2_collapse import (
     select_cell_task_ids,
 )
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CSV_FIELDS = ["condition", "task_id", "family", "level", "seed", "success"]
 
 # held-out generalization family (never augmented in condition C)

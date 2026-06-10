@@ -2,9 +2,9 @@
 
 import pytest
 
-from eval.bootstrap import bootstrap_ci
-from eval.holm import holm_bonferroni
-from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.stats.bootstrap import bootstrap_ci
+from eval.stats.holm import holm_bonferroni
+from eval.stats.paired import mcnemar, paired_bootstrap_delta
 
 
 def _matched(a_only: int, b_only: int, both: int = 0, neither: int = 0):

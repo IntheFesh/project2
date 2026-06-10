@@ -22,7 +22,7 @@ import random
 from collections.abc import Sequence
 
 from eval.metrics import success_rate
-from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.stats.paired import mcnemar, paired_bootstrap_delta
 
 INSTRUCTION_VARIANTS: tuple[str, ...] = ("correct", "blank", "shuffled", "mismatched")
 ABLATED_VARIANTS: tuple[str, ...] = ("blank", "shuffled", "mismatched")

@@ -19,10 +19,10 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from eval.bootstrap import bootstrap_ci
-from eval.holm import holm_bonferroni
+from eval.stats.bootstrap import bootstrap_ci
+from eval.stats.holm import holm_bonferroni
 from eval.metrics import generalization_gap, recovery, success_rate
-from eval.paired import mcnemar, paired_bootstrap_delta
+from eval.stats.paired import mcnemar, paired_bootstrap_delta
 from eval.probe import ABLATED_VARIANTS, language_sensitivity_paired
 
 CLEAN_FAMILY = "clean"
